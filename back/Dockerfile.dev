@@ -1,0 +1,24 @@
+FROM node:22-alpine
+
+WORKDIR /app
+
+# Установка зависимостей для musl/OpenSSL (нужно для Prisma)
+RUN apk add --no-cache bash libc6-compat openssl
+
+# Копируем package.json и package-lock.json
+COPY package*.json ./
+
+# Устанавливаем зависимости
+RUN npm install
+
+# Копируем весь проект
+COPY . .
+
+# Генерация Prisma Client
+RUN npx prisma generate
+
+# Проброс порта для NestJS
+EXPOSE 4200
+
+# Запуск с hot-reload
+CMD ["npm", "run", "start:dev"]

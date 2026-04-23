@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator dbml {
+  provider = "prisma-dbml-generator"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String  @id @default(cuid())
+  email     String  @unique
+  password  String
+  avatarUrl String? @map("avatar_url")
+
+  ozonUserId Int?    @map("ozon_user_id")
+  ozonApiKey String? @map("ozon_api_key")
+
+  organizations Organization[]
+  products      Product[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Organization {
+  id      String @id @default(cuid())
+  fullOrg String @map("full_org")
+  fullOpf String @map("full_opf")
+
+  // ❗ перевели в String
+  inn    String @unique
+  ogrn   String @unique
+  okato5 String @map("okato_5")
+
+  fullAddress String @map("full_address")
+  city        String
+  region      String
+  country     String
+  orgLang     String @default("RU") @map("org_lang")
+
+  // ✅ каскад при удалении юзера
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  declarant Declarant?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("organizations")
+}
+
+model Declarant {
+  id         String  @id @default(cuid())
+  name       String?
+  surname    String?
+  patronymic String?
+
+  // ✅ 1:1 + каскад
+  organizationId String       @unique @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  document Document?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([organizationId])
+  @@map("declarants")
+}
+
+model Document {
+  id String @id @default(cuid())
+
+  series         String
+  number         String
+  issuedBy       String   @map("issued_by")
+  issuedAt       DateTime @map("issued_at")
+  departmentCode String?
+
+  // ✅ 1:1 + каскад
+  declarantId String    @unique @map("declarant_id")
+  declarant   Declarant @relation(fields: [declarantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([declarantId])
+  @@map("documents") // 👈 переименовали, теперь логично
+}
+
+model Product {
+  id           String  @id @default(cuid())
+  productId    Int     @map("product_id")
+  offerId      String  @map("offer_id")
+  sku          Int
+  name         String
+  description  String?
+  category     String
+  categoryPath String  @map("category_path")
+
+  primaryImg String?  @map("primary_img")
+  images     String[]
+
+  country           String?
+  countriesOfOrigin String[] @map("countries_of_origin")
+  countryConflict   Boolean  @default(false) @map("country_conflict")
+
+  // ❗ тоже строка
+  tnvedCode   String?       @map("tnved_code")
+  tnvedName   String?       @map("tnved_name")
+  tnvedStatus TNVED_STATUS? @map("tnved_status")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // ❗ чаще лучше НЕ удалять товары → SetNull
+  userId String? @map("user_id")
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  // альтернативно можно:
+  // offerId String @unique
+
+  // ✅ защита от дублей
+  @@unique([productId, userId])
+  @@index([userId])
+  @@map("products")
+}
+
+enum TNVED_STATUS {
+  DONE
+  NEEDS_REVIEW
+  CLASSIFIED_BY_HUMAN
+}
