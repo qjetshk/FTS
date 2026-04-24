@@ -1,0 +1,101 @@
+//// ------------------------------------------------------
+//// THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+//// ------------------------------------------------------
+
+Table users {
+  id String [pk]
+  email String [unique, not null]
+  password String [not null]
+  avatarUrl String
+  ozonUserId Int
+  ozonApiKey String
+  organizations organizations [not null]
+  products products [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+}
+
+Table organizations {
+  id String [pk]
+  fullOrg String [not null]
+  fullOpf String [not null]
+  inn String [unique, not null]
+  ogrn String [unique, not null]
+  okato5 String [not null]
+  fullAddress String [not null]
+  city String [not null]
+  region String [not null]
+  country String [not null]
+  orgLang String [not null, default: 'RU']
+  userId String [not null]
+  user users [not null]
+  declarant declarants
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+}
+
+Table declarants {
+  id String [pk]
+  name String
+  surname String
+  patronymic String
+  organizationId String [unique, not null]
+  organization organizations [not null]
+  document documents
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+}
+
+Table documents {
+  id String [pk]
+  series String [not null]
+  number String [not null]
+  issuedBy String [not null]
+  issuedAt DateTime [not null]
+  departmentCode String
+  declarantId String [unique, not null]
+  declarant declarants [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+}
+
+Table products {
+  id String [pk]
+  productId Int [not null]
+  offerId String [not null]
+  sku Int [not null]
+  name String [not null]
+  description String
+  category String [not null]
+  categoryPath String [not null]
+  primaryImg String
+  images String[] [not null]
+  country String
+  countriesOfOrigin String[] [not null]
+  countryConflict Boolean [not null, default: false]
+  tnvedCode String
+  tnvedName String
+  tnvedStatus TNVED_STATUS
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  userId String
+  user users
+
+  indexes {
+    (productId, userId) [unique]
+  }
+}
+
+Enum TNVED_STATUS {
+  DONE
+  NEEDS_REVIEW
+  CLASSIFIED_BY_HUMAN
+}
+
+Ref: organizations.userId > users.id [delete: Cascade]
+
+Ref: declarants.organizationId - organizations.id [delete: Cascade]
+
+Ref: documents.declarantId - declarants.id [delete: Cascade]
+
+Ref: products.userId > users.id [delete: Set Null]

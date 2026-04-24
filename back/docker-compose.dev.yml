@@ -27,7 +27,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: bodo-back
+    container_name: fts-back
     restart: always
     ports:
       - '${PORT}:${PORT}' # порт берём из .env
