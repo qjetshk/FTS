@@ -14,13 +14,26 @@ model User {
   id        String  @id @default(cuid())
   email     String  @unique
   password  String
+  name      String
   avatarUrl String? @map("avatar_url")
 
-  ozonUserId Int?    @map("ozon_user_id")
-  ozonApiKey String? @map("ozon_api_key")
+  // Верификация email
+  isEmailVerified   Boolean   @default(false) @map("is_email_verified")
+  emailVerifyToken  String?   @unique @map("email_verify_token")
+  emailVerifyExpiry DateTime? @map("email_verify_expiry")
+
+  // Сброс пароля
+  passwordResetToken  String?   @unique @map("password_reset_token")
+  passwordResetExpiry DateTime? @map("password_reset_expiry")
+
+  // Подписка
+  plan           PLAN        @default(TRIAL)
+  planExpiresAt  DateTime?   @map("plan_expires_at")
+  planStatus     PLAN_STATUS @default(ACTIVE) @map("plan_status")
+  trialStartedAt DateTime?   @default(now()) @map("trial_started_at")
 
   organizations Organization[]
-  products      Product[]
+  refreshTokens RefreshToken[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -28,25 +41,65 @@ model User {
   @@map("users")
 }
 
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+
+  // для инвалидации всех сессий разом
+  isRevoked Boolean @default(false) @map("is_revoked")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+enum PLAN {
+  TRIAL // 7 дней бесплатно
+  BASIC // 8000₽/год — до 3 магазинов
+  PRO // 15000₽/год — безлимит
+}
+
+enum PLAN_STATUS {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
 model Organization {
-  id      String @id @default(cuid())
+  id String @id @default(cuid())
+
+  ozonClientId Int    @map("ozon_client_id")
+  ozonApiKey   String @map("ozon_api_key")
+
   fullOrg String @map("full_org")
   fullOpf String @map("full_opf")
 
   // ❗ перевели в String
-  inn    String @unique
-  ogrn   String @unique
-  okato5 String @map("okato_5")
+  inn    String  @unique
+  ogrn   String  @unique
+  kpp    String? // ИП не имеют КПП, поэтому опционально
+  okato5 String  @map("okato_5")
 
-  fullAddress String @map("full_address")
-  city        String
-  region      String
-  country     String
-  orgLang     String @default("RU") @map("org_lang")
+  country    String
+  region     String
+  city       String
+  street     String?
+  house      String?
+  room       String?
+  postalCode String  @map("postal_code")
+
+  orgLang String @default("RU") @map("org_lang")
 
   // ✅ каскад при удалении юзера
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  products Product[]
 
   declarant Declarant?
 
@@ -62,6 +115,9 @@ model Declarant {
   name       String?
   surname    String?
   patronymic String?
+  position   String? // Должность
+  phone      String?
+  email      String?
 
   // ✅ 1:1 + каскад
   organizationId String       @unique @map("organization_id")
@@ -79,13 +135,14 @@ model Declarant {
 model Document {
   id String @id @default(cuid())
 
-  series         String
-  number         String
-  issuedBy       String   @map("issued_by")
-  issuedAt       DateTime @map("issued_at")
-  departmentCode String?
+  typeCode  String @map("type_code") // "RU01001"
+  typeShort String @map("type_short") // "ПАСРФ"
 
-  // ✅ 1:1 + каскад
+  series   String?
+  number   String
+  issuedBy String   @map("issued_by")
+  issuedAt DateTime @map("issued_at")
+
   declarantId String    @unique @map("declarant_id")
   declarant   Declarant @relation(fields: [declarantId], references: [id], onDelete: Cascade)
 
@@ -93,7 +150,7 @@ model Document {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([declarantId])
-  @@map("documents") // 👈 переименовали, теперь логично
+  @@map("documents")
 }
 
 model Product {
@@ -116,25 +173,23 @@ model Product {
   // ❗ тоже строка
   tnvedCode   String?       @map("tnved_code")
   tnvedName   String?       @map("tnved_name")
+  tnvedUnit   String?       @map("tnved_unit")
   tnvedStatus TNVED_STATUS? @map("tnved_status")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  // ❗ чаще лучше НЕ удалять товары → SetNull
-  userId String? @map("user_id")
-  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
-  // альтернативно можно:
-  // offerId String @unique
+  organizationId String?       @map("organization_id")
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
-  // ✅ защита от дублей
-  @@unique([productId, userId])
-  @@index([userId])
+  @@unique([productId, organizationId])
+  @@index([organizationId])
   @@map("products")
 }
 
 enum TNVED_STATUS {
-  DONE
-  NEEDS_REVIEW
-  CLASSIFIED_BY_HUMAN
+  CLASSIFIED // ИИ классифицировал, всё ок
+  NEEDS_REVIEW // был tnved_code у товара → нужна проверка человеком
+  VERIFIED // человек подтвердил/исправил вручную
+  FAILED // ИИ не смог классифицировать
 }
