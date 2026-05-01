@@ -6,29 +6,54 @@ Table users {
   id String [pk]
   email String [unique, not null]
   password String [not null]
+  name String [not null]
   avatarUrl String
-  ozonUserId Int
-  ozonApiKey String
+  isEmailVerified Boolean [not null, default: false]
+  emailVerifyToken String [unique]
+  emailVerifyExpiry DateTime
+  passwordResetToken String [unique]
+  passwordResetExpiry DateTime
+  plan PLAN [not null, default: 'TRIAL']
+  planExpiresAt DateTime
+  planStatus PLAN_STATUS [not null, default: 'ACTIVE']
+  trialStartedAt DateTime [default: `now()`]
   organizations organizations [not null]
-  products products [not null]
+  refreshTokens refresh_tokens [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
+Table refresh_tokens {
+  id String [pk]
+  token String [unique, not null]
+  expiresAt DateTime [not null]
+  isRevoked Boolean [not null, default: false]
+  userId String [not null]
+  user users [not null]
+  createdAt DateTime [default: `now()`, not null]
+}
+
 Table organizations {
   id String [pk]
+  ozonClientId Int [not null]
+  ozonApiKey String [not null]
   fullOrg String [not null]
   fullOpf String [not null]
   inn String [unique, not null]
   ogrn String [unique, not null]
+  kpp String
   okato5 String [not null]
-  fullAddress String [not null]
-  city String [not null]
-  region String [not null]
   country String [not null]
+  region String [not null]
+  city String [not null]
+  street String
+  house String
+  room String
+  postalCode String [not null]
   orgLang String [not null, default: 'RU']
   userId String [not null]
   user users [not null]
+  products products [not null]
   declarant declarants
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
@@ -39,6 +64,9 @@ Table declarants {
   name String
   surname String
   patronymic String
+  position String
+  phone String
+  email String
   organizationId String [unique, not null]
   organization organizations [not null]
   document documents
@@ -48,11 +76,12 @@ Table declarants {
 
 Table documents {
   id String [pk]
-  series String [not null]
+  typeCode String [not null]
+  typeShort String [not null]
+  series String
   number String [not null]
   issuedBy String [not null]
   issuedAt DateTime [not null]
-  departmentCode String
   declarantId String [unique, not null]
   declarant declarants [not null]
   createdAt DateTime [default: `now()`, not null]
@@ -75,22 +104,38 @@ Table products {
   countryConflict Boolean [not null, default: false]
   tnvedCode String
   tnvedName String
+  tnvedUnit String
   tnvedStatus TNVED_STATUS
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
-  userId String
-  user users
+  organizationId String
+  organization organizations
 
   indexes {
-    (productId, userId) [unique]
+    (productId, organizationId) [unique]
   }
 }
 
-Enum TNVED_STATUS {
-  DONE
-  NEEDS_REVIEW
-  CLASSIFIED_BY_HUMAN
+Enum PLAN {
+  TRIAL
+  BASIC
+  PRO
 }
+
+Enum PLAN_STATUS {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+Enum TNVED_STATUS {
+  CLASSIFIED
+  NEEDS_REVIEW
+  VERIFIED
+  FAILED
+}
+
+Ref: refresh_tokens.userId > users.id [delete: Cascade]
 
 Ref: organizations.userId > users.id [delete: Cascade]
 
@@ -98,4 +143,4 @@ Ref: declarants.organizationId - organizations.id [delete: Cascade]
 
 Ref: documents.declarantId - declarants.id [delete: Cascade]
 
-Ref: products.userId > users.id [delete: Set Null]
+Ref: products.organizationId > organizations.id [delete: Set Null]
