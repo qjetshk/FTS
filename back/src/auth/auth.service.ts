@@ -52,6 +52,15 @@ export class AuthService {
       },
     });
 
+    const setAvatar = await this.prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        avatarUrl: `https://api.dicebear.com/9.x/glass/svg?seed=${user.id}`,
+      },
+    });
+
     return this.issueTokens(user.id, res);
   }
 

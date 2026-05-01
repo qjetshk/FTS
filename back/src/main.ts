@@ -17,7 +17,10 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
 
   app.enableCors({
-    origin: config.getOrThrow<string>('FRONTEND_URL'),
+    origin: [
+      config.getOrThrow<string>('FRONTEND_URL'),
+      config.getOrThrow<string>('N8N_URL'),
+    ],
     credentials: true,
   });
 
