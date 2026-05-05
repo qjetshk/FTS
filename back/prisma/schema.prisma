@@ -73,17 +73,17 @@ enum PLAN_STATUS {
 model Organization {
   id String @id @default(cuid())
 
-  ozonClientId Int    @map("ozon_client_id")
+  ozonClientId Int    @unique @map("ozon_client_id")
   ozonApiKey   String @map("ozon_api_key")
 
   fullOrg String @map("full_org")
   fullOpf String @map("full_opf")
 
   // ❗ перевели в String
-  inn    String @unique
-  ogrn   String @unique
+  inn    String  @unique
+  ogrn   String  @unique
   kpp    String? // ИП не имеют КПП, поэтому опционально
-  okato5 String @map("okato_5")
+  okato5 String  @map("okato_5")
 
   country    String
   region     String
@@ -91,7 +91,7 @@ model Organization {
   street     String?
   house      String?
   room       String?
-  postalCode String @map("postal_code")
+  postalCode String  @map("postal_code")
 
   orgLang String @default("RU") @map("org_lang")
 

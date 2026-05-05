@@ -35,7 +35,7 @@ Table refresh_tokens {
 
 Table organizations {
   id String [pk]
-  ozonClientId Int [not null]
+  ozonClientId Int [unique, not null]
   ozonApiKey String [not null]
   fullOrg String [not null]
   fullOpf String [not null]

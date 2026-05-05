@@ -9,10 +9,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { OrganizationService } from './organization.service';
-import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import type { JwtPayload } from 'src/auth/interfaces/jwt.interface';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { ApiKeyGuard } from 'src/guards/api-key.guard';
+import { CurrentUser } from 'src/decorators/current-user.decorator';
+import { JwtAuthGuard } from 'src/guards/jwt.guard';
 
 @Controller('organizations')
 export class OrganizationController {
@@ -21,14 +22,13 @@ export class OrganizationController {
   @Post('create')
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(ApiKeyGuard)
-  async createOrganization(
-    @Body() dto: CreateOrganizationDto,
-  ) {
+  async createOrganization(@Body() dto: CreateOrganizationDto) {
     return this.organizationService.createOrganization(dto);
   }
 
-  @Get('get_first')
+  @Get('get-first')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
   async getFirstOrganization(@CurrentUser() user: JwtPayload) {
     return this.organizationService.getFirstOrganization(user.id);
   }
@@ -38,4 +38,10 @@ export class OrganizationController {
   async getOrganization(@Param('id') id: string) {
     return this.organizationService.getOrganization(id);
   }
+
+/*   @Post('update')
+  @HttpCode(HttpStatus.OK)
+  async updateOrganization(@Body() dto: ) {
+
+  } */
 }
