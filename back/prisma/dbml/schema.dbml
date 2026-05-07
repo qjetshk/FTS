@@ -57,6 +57,7 @@ Table organizations {
   declarant declarants
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
+  statForms stat_forms [not null]
 }
 
 Table declarants {
@@ -116,6 +117,21 @@ Table products {
   }
 }
 
+Table stat_forms {
+  id String [pk]
+  orgId String [not null]
+  country String [not null]
+  period String [not null]
+  encryptedXml Json [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  organization organizations [not null]
+
+  indexes {
+    (orgId, country, period) [unique]
+  }
+}
+
 Enum PLAN {
   TRIAL
   BASIC
@@ -144,3 +160,5 @@ Ref: declarants.organizationId - organizations.id [delete: Cascade]
 Ref: documents.declarantId - declarants.id [delete: Cascade]
 
 Ref: products.organizationId > organizations.id [delete: Set Null]
+
+Ref: stat_forms.orgId > organizations.id [delete: Cascade]

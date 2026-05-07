@@ -16,7 +16,7 @@ import { UpdateTnvedDto } from './dto/update-tnved.dto';
 import { JwtAuthGuard } from 'src/guards/jwt.guard';
 import { GetProductsDto } from './dto/get-products.dto';
 
-@Controller('product')
+@Controller('products')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 

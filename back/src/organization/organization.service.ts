@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
+import { UpdateDeclarantDto } from './dto/update-declarant.dto';
+import { CreateDocumentDto } from './dto/create-document.dto';
 
 @Injectable()
 export class OrganizationService {
@@ -80,10 +82,11 @@ export class OrganizationService {
     return organization;
   }
 
-  async getOrganization(id: string) {
-    const organization = await this.prisma.organization.findUnique({
+  async getOrganization(id: string, clientId: string) {
+    const ozonClientId = Number(clientId)
+    const organization = await this.prisma.organization.findFirst({
       where: {
-        id,
+        OR: [{ id }, { ozonClientId }],
       },
       include: {
         declarant: {
@@ -99,5 +102,49 @@ export class OrganizationService {
     }
 
     return organization;
+  }
+
+  async getDeclarantById(id: string) {
+    const declarant = await this.prisma.declarant.findUniqueOrThrow({
+      where: {
+        id,
+      },
+      include: {
+        document: true,
+      },
+    });
+
+    return declarant;
+  }
+
+  async updateDeclarant(dto: UpdateDeclarantDto) {
+    const { id, ...data } = dto;
+    const updated = await this.prisma.declarant.update({
+      where: {
+        id: dto.id,
+      },
+      data,
+    });
+
+    return { message: 'Декларант успешно обновлен!' };
+  }
+
+  async createDocument(dto: CreateDocumentDto) {
+    const { declarantId, issuedAt, ...data } = dto;
+
+    await this.prisma.document.upsert({
+      where: { declarantId },
+      create: {
+        ...data,
+        issuedAt: new Date(issuedAt),
+        declarantId,
+      },
+      update: {
+        ...data,
+        issuedAt: new Date(issuedAt),
+      },
+    });
+
+    return { message: 'Документ сохранён!' };
   }
 }

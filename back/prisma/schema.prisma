@@ -103,8 +103,9 @@ model Organization {
 
   declarant Declarant?
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  statForms StatForm[]
 
   @@index([userId])
   @@map("organizations")
@@ -185,6 +186,22 @@ model Product {
   @@unique([productId, organizationId])
   @@index([organizationId])
   @@map("products")
+}
+
+model StatForm {
+  id           String   @id @default(cuid())
+  orgId        String   @map("org_id")
+  country      String
+  period       String // 'YYYY-MM'
+  encryptedXml Json     @map("encrypted_xml")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, country, period])
+  @@index([orgId])
+  @@map("stat_forms")
 }
 
 enum TNVED_STATUS {
