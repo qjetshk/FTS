@@ -84,20 +84,37 @@ export class ProductService {
       select: { id: true },
     });
 
-    return this.prisma.product.update({
+    const product = await this.prisma.product.findUniqueOrThrow({
       where: {
         productId_organizationId: {
           productId: dto.productId,
           organizationId: organization.id,
         },
       },
-      data: {
-        tnvedCode: dto.tnvedCode,
-        tnvedName: dto.tnvedName,
-        tnvedUnit: dto.tnvedUnit,
-        tnvedStatus: dto.tnvedStatus,
-      },
+      select: { id: true },
     });
+
+    return this.prisma.$transaction([
+      this.prisma.tnvedAlternative.deleteMany({
+        where: { productId: product.id },
+      }),
+      this.prisma.product.update({
+        where: { id: product.id },
+        data: {
+          tnvedCode: dto.tnvedCode,
+          tnvedName: dto.tnvedName,
+          tnvedUnit: dto.tnvedUnit,
+          tnvedStatus: dto.tnvedStatus,
+          tnvedAlternatives: {
+            create: (dto.tnvedAlternatives ?? []).map((a) => ({
+              tnvedCode: a.tnvedCode,
+              tnvedName: a.tnvedName,
+              tnvedUnit: a.tnvedUnit,
+            })),
+          },
+        },
+      }),
+    ]);
   }
 
   async getProducts(dto: GetProductsDto) {

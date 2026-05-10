@@ -1,5 +1,20 @@
 import { TNVED_STATUS } from '@prisma/client';
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+
+class TnvedAlternativeDto {
+  @IsString()
+  @IsNotEmpty()
+  tnvedCode!: string;
+
+  @IsString()
+  @IsOptional()
+  tnvedName?: string;
+
+  @IsString()
+  @IsOptional()
+  tnvedUnit?: string | null;
+}
 
 export class UpdateTnvedDto {
   @IsNumber()
@@ -20,9 +35,15 @@ export class UpdateTnvedDto {
 
   @IsString()
   @IsOptional()
-  tnvedUnit?: string;
+  tnvedUnit?: string | null;
 
   @IsEnum(TNVED_STATUS)
   @IsNotEmpty()
-  tnvedStatus!: TNVED_STATUS
+  tnvedStatus!: TNVED_STATUS;
+
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => TnvedAlternativeDto)
+  tnvedAlternatives?: TnvedAlternativeDto[];
 }

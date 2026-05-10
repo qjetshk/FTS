@@ -177,6 +177,8 @@ model Product {
   tnvedUnit   String?       @map("tnved_unit")
   tnvedStatus TNVED_STATUS? @map("tnved_status")
 
+  tnvedAlternatives TnvedAlternative[]
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -186,6 +188,18 @@ model Product {
   @@unique([productId, organizationId])
   @@index([organizationId])
   @@map("products")
+}
+
+model TnvedAlternative {
+  id        String  @id @default(cuid())
+  tnvedCode String  @map("tnved_code")
+  tnvedName String? @map("tnved_name")
+  tnvedUnit String? @map("tnved_unit")
+
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("tnved_alternatives")
 }
 
 model StatForm {
@@ -207,6 +221,6 @@ model StatForm {
 enum TNVED_STATUS {
   CLASSIFIED // ИИ классифицировал, всё ок
   NEEDS_REVIEW // был tnved_code у товара → нужна проверка человеком
-  VERIFIED // человек подтвердил/исправил вручную
-  FAILED // ИИ не смог классифицировать
+  VERIFIED_BY_USER // человек подтвердил/исправил вручную
+  VERIFIED_BY_LLM // проверила ии при верификации n8n
 }

@@ -142,3 +142,9 @@ back/.docker/
 # Miscellaneous
 # =====================================================
 *.log
+
+# -----------------
+# Project notes (local only)
+# -----------------
+CLAUDE.md
+n8n/
