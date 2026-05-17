@@ -67,28 +67,36 @@ export function aggregateOrders(
   tnvedMap: Record<number, { code: string; name: string }>,
   usdRate: number,
 ): AggregatedGood[] {
-  // каждый заказ = отдельная строка GoodsInfo
-  // НЕ агрегируем, просто маппируем
-  return orders
-    .map((order) => {
-      const tnved = tnvedMap[Number(order.sku)];
-      if (!tnved) return null;
+  const map = new Map<string, AggregatedGood>();
 
-      const weight = parseFloat(
-        (parseFloat(order.weight) * order.quantity).toFixed(4),
+  for (const order of orders) {
+    const tnved = tnvedMap[Number(order.sku)];
+    if (!tnved) continue;
+
+    const weight = parseFloat(order.weight) * order.quantity;
+    const costRub = order.shipment_amount;
+
+    const existing = map.get(tnved.code);
+    if (existing) {
+      existing.netWeight = parseFloat((existing.netWeight + weight).toFixed(4));
+      existing.invoicedCost += costRub;
+      existing.statisticalCostRub += costRub;
+      existing.statisticalCostUsd = parseFloat(
+        (existing.statisticalCostRub / usdRate).toFixed(2),
       );
-      const costRub = order.shipment_amount;
-
-      return {
+    } else {
+      map.set(tnved.code, {
         tnvedCode: tnved.code,
         tnvedName: tnved.name,
-        netWeight: weight,
+        netWeight: parseFloat(weight.toFixed(4)),
         invoicedCost: costRub,
         statisticalCostRub: costRub,
         statisticalCostUsd: parseFloat((costRub / usdRate).toFixed(2)),
-      };
-    })
-    .filter(Boolean) as AggregatedGood[];
+      });
+    }
+  }
+
+  return [...map.values()];
 }
 
 // ─── Уникальные документы (счета-фактуры) ────────────────────────────────────

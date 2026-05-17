@@ -57,7 +57,7 @@ Table organizations {
   declarant declarants
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
-  statForms stat_forms [not null]
+  statFormRuns stat_form_runs [not null]
 }
 
 Table declarants {
@@ -127,18 +127,41 @@ Table tnved_alternatives {
   product products [not null]
 }
 
-Table stat_forms {
+Table stat_form_runs {
   id String [pk]
-  orgId String [not null]
-  country String [not null]
+  organizationId String [not null]
   period String [not null]
-  encryptedXml Json [not null]
+  status RUN_STATUS [not null, default: 'PENDING']
+  detectedCountries String[] [not null]
+  countriesDetectedAt DateTime
+  completedAt DateTime
+  failureReason String
+  organization organizations [not null]
+  statForms stat_forms [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
-  organization organizations [not null]
 
   indexes {
-    (orgId, country, period) [unique]
+    (organizationId, period) [unique]
+  }
+}
+
+Table stat_forms {
+  id String [pk]
+  runId String [not null]
+  country String [not null]
+  status STAT_FORM_STATUS [not null, default: 'PENDING']
+  encryptedXml Json
+  xmlFilename String
+  itemsCount Int
+  needsReview Int
+  completedAt DateTime
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  run stat_form_runs [not null]
+
+  indexes {
+    (runId, country) [unique]
   }
 }
 
@@ -152,6 +175,20 @@ Enum PLAN_STATUS {
   ACTIVE
   EXPIRED
   CANCELLED
+}
+
+Enum RUN_STATUS {
+  PENDING
+  BUILDING
+  READY
+  PARTIAL
+  FAILED
+}
+
+Enum STAT_FORM_STATUS {
+  PENDING
+  READY
+  FAILED
 }
 
 Enum TNVED_STATUS {
@@ -173,4 +210,6 @@ Ref: products.organizationId > organizations.id [delete: Set Null]
 
 Ref: tnved_alternatives.productId > products.id [delete: Cascade]
 
-Ref: stat_forms.orgId > organizations.id [delete: Cascade]
+Ref: stat_form_runs.organizationId > organizations.id [delete: Cascade]
+
+Ref: stat_forms.runId > stat_form_runs.id [delete: Cascade]

@@ -4,12 +4,14 @@ import { buildStatFormXml } from './statform.builder';
 import { CreateStatformDto } from './dto/create-statform.dto';
 import { decrypt, encrypt, EncryptedPayload } from 'src/utils/crypto.util';
 import { CbrService } from './cbr.service';
+import { StatformProducer } from './statform.producer';
 
 @Injectable()
 export class StatformService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cbr: CbrService,
+    private readonly producer: StatformProducer,
   ) {}
 
   async createStatform(dto: CreateStatformDto) {
@@ -42,13 +44,12 @@ export class StatformService {
     });
 
     const tnvedMap = Object.fromEntries(
-      // сервис
       products.map((p) => [p.sku, { code: p.tnvedCode!, name: p.tnvedName! }]),
     );
 
     // ── 4. Курс USD с ЦБ РФ на первое число отчётного месяца ─────────────────
     const [year, month] = period.split('-');
-    const cbrDate = `01.${month}.${year}`; // DD.MM.YYYY
+    const cbrDate = `01.${month}.${year}`;
     const usdRate = await this.cbr.getUsdRate(cbrDate);
 
     // ── 5. Генерация XML ──────────────────────────────────────────────────────
@@ -68,22 +69,39 @@ export class StatformService {
     const key = Buffer.from(process.env.XML_ENCRYPTION_KEY!, 'hex');
     const encryptedXml = encrypt(xml, key);
 
-    // ── 7. Сохранение (upsert — перегенерация за тот же период перезапишет) ──
-    const statform = await this.prisma.statForm.upsert({
-      where: {
-        orgId_country_period: { orgId: organizationId, country, period },
-      },
-      update: { encryptedXml },
-      create: { orgId: organizationId, country, period, encryptedXml },
+    // ── 7. Найти или создать StatFormRun для (organizationId, period) ─────────
+    const run = await this.prisma.statFormRun.upsert({
+      where: { organizationId_period: { organizationId, period } },
+      create: { organizationId, period },
+      update: {},
     });
 
-    return { id: statform.id, country, period };
+    // ── 8. Upsert StatForm по (runId, country) ────────────────────────────────
+    const statform = await this.prisma.statForm.upsert({
+      where: { runId_country: { runId: run.id, country } },
+      create: {
+        runId: run.id,
+        country,
+        status: 'READY',
+        encryptedXml,
+        itemsCount: orders.length,
+        completedAt: new Date(),
+      },
+      update: {
+        status: 'READY',
+        encryptedXml,
+        itemsCount: orders.length,
+        completedAt: new Date(),
+      },
+    });
+
+    return { id: statform.id, runId: run.id, country, period };
   }
 
-  // ── Получить расшифрованный XML для скачивания ────────────────────────────
+  // ── Скачать расшифрованный XML ────────────────────────────────────────────
   async getStatformXml(id: string, organizationId: string): Promise<string> {
     const statform = await this.prisma.statForm.findFirst({
-      where: { id, orgId: organizationId },
+      where: { id, run: { organizationId } },
     });
     if (!statform) throw new NotFoundException('Statform not found');
 
@@ -91,11 +109,21 @@ export class StatformService {
     return decrypt(statform.encryptedXml as unknown as EncryptedPayload, key);
   }
 
-  // ── Список статформ организации ───────────────────────────────────────────
+  // ── Список ранов организации со статформами ───────────────────────────────
   async getStatforms(organizationId: string) {
-    return this.prisma.statForm.findMany({
-      where: { orgId: organizationId },
-      select: { id: true, country: true, period: true, createdAt: true },
+    return this.prisma.statFormRun.findMany({
+      where: { organizationId },
+      include: {
+        statForms: {
+          select: {
+            id: true,
+            country: true,
+            status: true,
+            itemsCount: true,
+            completedAt: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -107,5 +135,44 @@ export class StatformService {
     });
     if (!org) throw new NotFoundException('Organization not found');
     return org;
+  }
+
+  // ── Поставить задачу генерации в очередь (ручной запуск) ─────────────────
+  async runStatform(org: { id: string; ozonClientId: number; ozonApiKey: string }, period: string) {
+    await this.producer.enqueue({
+      organizationId: org.id,
+      ozonClientId: org.ozonClientId,
+      ozonApiKey: org.ozonApiKey,
+      period,
+      triggeredBy: 'manual',
+    });
+
+    return { queued: true, period };
+  }
+
+  // ── Коллбэки от n8n — обновить статус рана ───────────────────────────────
+  async completeRun(organizationId: string, period: string) {
+    console.log(`[completeRun] called: org=${organizationId} period=${period}`);
+    const run = await this.prisma.statFormRun.findUnique({
+      where: { organizationId_period: { organizationId, period } },
+      include: { statForms: { select: { status: true } } },
+    });
+    if (!run) return;
+
+    const hasFailed = run.statForms.some((f) => f.status === 'FAILED');
+    const allReady = run.statForms.every((f) => f.status === 'READY');
+    const status = allReady ? 'READY' : hasFailed ? 'PARTIAL' : 'READY';
+
+    await this.prisma.statFormRun.update({
+      where: { id: run.id },
+      data: { status, completedAt: new Date() },
+    });
+  }
+
+  async failRun(organizationId: string, period: string, reason?: string) {
+    await this.prisma.statFormRun.update({
+      where: { organizationId_period: { organizationId, period } },
+      data: { status: 'FAILED', failureReason: reason ?? null },
+    });
   }
 }

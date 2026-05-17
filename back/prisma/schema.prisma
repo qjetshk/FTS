@@ -103,9 +103,9 @@ model Organization {
 
   declarant Declarant?
 
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
-  statForms StatForm[]
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  statFormRuns StatFormRun[]
 
   @@index([userId])
   @@map("organizations")
@@ -202,25 +202,66 @@ model TnvedAlternative {
   @@map("tnved_alternatives")
 }
 
+model StatFormRun {
+  id             String     @id @default(cuid())
+  organizationId String     @map("organization_id")
+  period         String // 'YYYY-MM'
+  status         RUN_STATUS @default(PENDING)
+
+  detectedCountries   String[]  @map("detected_countries")
+  countriesDetectedAt DateTime? @map("countries_detected_at")
+  completedAt         DateTime? @map("completed_at")
+  failureReason       String?   @map("failure_reason")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  statForms    StatForm[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([organizationId, period])
+  @@index([organizationId])
+  @@map("stat_form_runs")
+}
+
 model StatForm {
-  id           String   @id @default(cuid())
-  orgId        String   @map("org_id")
+  id           String           @id @default(cuid())
+  runId        String           @map("run_id")
   country      String
-  period       String // 'YYYY-MM'
-  encryptedXml Json     @map("encrypted_xml")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  status       STAT_FORM_STATUS @default(PENDING)
+  encryptedXml Json?            @map("encrypted_xml")
+  xmlFilename  String?          @map("xml_filename")
+  itemsCount   Int?             @map("items_count")
+  needsReview  Int?             @map("needs_review")
 
-  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  @@unique([orgId, country, period])
-  @@index([orgId])
+  run StatFormRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, country])
+  @@index([runId])
   @@map("stat_forms")
 }
 
+enum RUN_STATUS {
+  PENDING
+  BUILDING
+  READY
+  PARTIAL
+  FAILED
+}
+
+enum STAT_FORM_STATUS {
+  PENDING
+  READY
+  FAILED
+}
+
 enum TNVED_STATUS {
-  CLASSIFIED // ИИ классифицировал, всё ок
-  NEEDS_REVIEW // был tnved_code у товара → нужна проверка человеком
-  VERIFIED_BY_USER // человек подтвердил/исправил вручную
-  VERIFIED_BY_LLM // проверила ии при верификации n8n
+  CLASSIFIED
+  NEEDS_REVIEW
+  VERIFIED_BY_USER
+  VERIFIED_BY_LLM
 }

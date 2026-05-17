@@ -117,6 +117,24 @@ export class ProductService {
     ]);
   }
 
+  async getProductsSnapshot(clientId: number) {
+    const organization = await this.prisma.organization.findUniqueOrThrow({
+      where: { ozonClientId: Number(clientId) },
+      select: { id: true },
+    });
+
+    return this.prisma.product.findMany({
+      where: { organizationId: organization.id },
+      select: {
+        productId: true,
+        sku: true,
+        name: true,
+        categoryPath: true,
+        tnvedStatus: true,
+      },
+    });
+  }
+
   async getProducts(dto: GetProductsDto) {
     const organization = await this.prisma.organization.findUniqueOrThrow({
       where: { ozonClientId: dto.clientId },

@@ -9,35 +9,63 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { StatformService } from './statform.service';
+import { StatformCron } from './statform.cron';
 import { CreateStatformDto } from './dto/create-statform.dto';
+import { RunStatformDto } from './dto/run-statform.dto';
+import { RunCallbackDto } from './dto/run-callback.dto';
 import { JwtAuthGuard } from '../guards/jwt.guard';
 import { ApiKeyGuard } from '../guards/api-key.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 
 @Controller('statforms')
 export class StatformController {
-  constructor(private readonly statformService: StatformService) {}
+  constructor(
+    private readonly statformService: StatformService,
+    private readonly statformCron: StatformCron,
+  ) {}
 
-  // Вызывается пользователем вручную (перегенерация)
-  @Post('create-user')
-  @UseGuards(JwtAuthGuard)
-  async createStatformByUser(
-    @Body() dto: CreateStatformDto,
-    @CurrentUser() user: { id: string },
-  ) {
-    // organizationId берём из БД по userId — не доверяем тому что в dto
-    const org = await this.statformService.getOrgByUserId(user.id);
-    return this.statformService.createStatform({ ...dto, organizationId: org.id });
+  // ── Тест крона (удалить после проверки) ──────────────────────────────────
+  @Post('cron-test')
+  @UseGuards(ApiKeyGuard)
+  async cronTest() {
+    await this.statformCron.enqueueMonthlyStatforms();
+    return { ok: true };
   }
 
-  // Вызывается n8n автоматически
+  // ── Ручной запуск через очередь (async) ───────────────────────────────────
+  @Post('run')
+  @UseGuards(JwtAuthGuard)
+  async runStatform(
+    @Body() dto: RunStatformDto,
+    @CurrentUser() user: { id: string },
+  ) {
+    const org = await this.statformService.getOrgByUserId(user.id);
+    return this.statformService.runStatform(org, dto.period);
+  }
+
+  // ── Вызывается n8n — сохранить XML одной страны ───────────────────────────
   @Post('create-n8n')
   @UseGuards(ApiKeyGuard)
   async createStatformByN8N(@Body() dto: CreateStatformDto) {
     return this.statformService.createStatform(dto);
   }
 
-  // Список статформ текущего пользователя
+  // ── Коллбэки от n8n — обновить статус рана ───────────────────────────────
+  @Post('internal/run/complete')
+  @UseGuards(ApiKeyGuard)
+  async completeRun(@Body() dto: RunCallbackDto) {
+    await this.statformService.completeRun(dto.organizationId, dto.period);
+    return { ok: true };
+  }
+
+  @Post('internal/run/failed')
+  @UseGuards(ApiKeyGuard)
+  async failRun(@Body() dto: RunCallbackDto) {
+    await this.statformService.failRun(dto.organizationId, dto.period, dto.reason);
+    return { ok: true };
+  }
+
+  // ── Список ранов текущего пользователя ───────────────────────────────────
   @Get()
   @UseGuards(JwtAuthGuard)
   async getStatforms(@CurrentUser() user: { id: string }) {
@@ -45,7 +73,7 @@ export class StatformController {
     return this.statformService.getStatforms(org.id);
   }
 
-  // Скачать XML файл
+  // ── Скачать XML файл ──────────────────────────────────────────────────────
   @Get(':id/download')
   @UseGuards(JwtAuthGuard)
   async downloadStatform(
@@ -57,11 +85,7 @@ export class StatformController {
     const xml = await this.statformService.getStatformXml(id, org.id);
 
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="statform-${id}.xml"`,
-    );
+    res.setHeader('Content-Disposition', `attachment; filename="statform-${id}.xml"`);
     res.send(xml);
   }
 }
-

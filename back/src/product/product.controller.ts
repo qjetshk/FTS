@@ -41,6 +41,13 @@ export class ProductController {
     return this.productService.getExistingProductIds(clientId);
   }
 
+  @Get('snapshot/:clientId')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ApiKeyGuard)
+  async getProductsSnapshot(@Param('clientId') clientId: number) {
+    return this.productService.getProductsSnapshot(clientId);
+  }
+
   @Post('add-tnved')
   @UseGuards(ApiKeyGuard)
   async addTnved(@Body() dto: UpdateTnvedDto) {
