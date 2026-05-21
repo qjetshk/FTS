@@ -23,6 +23,8 @@ export interface N8nOrderItem {
 interface AggregatedGood {
   tnvedCode: string;
   tnvedName: string;
+  unit: string | null;
+  totalQuantity: number;
   netWeight: number;
   invoicedCost: number;
   statisticalCostRub: number;
@@ -64,7 +66,7 @@ function ns(namespace: string, content: Record<string, unknown> = {}): XmlNode {
 
 export function aggregateOrders(
   orders: N8nOrderItem[],
-  tnvedMap: Record<number, { code: string; name: string }>,
+  tnvedMap: Record<number, { code: string; name: string; unit: string | null }>,
   usdRate: number,
 ): AggregatedGood[] {
   const map = new Map<string, AggregatedGood>();
@@ -78,6 +80,7 @@ export function aggregateOrders(
 
     const existing = map.get(tnved.code);
     if (existing) {
+      existing.totalQuantity += order.quantity;
       existing.netWeight = parseFloat((existing.netWeight + weight).toFixed(4));
       existing.invoicedCost += costRub;
       existing.statisticalCostRub += costRub;
@@ -88,6 +91,8 @@ export function aggregateOrders(
       map.set(tnved.code, {
         tnvedCode: tnved.code,
         tnvedName: tnved.name,
+        unit: tnved.unit,
+        totalQuantity: order.quantity,
         netWeight: parseFloat(weight.toFixed(4)),
         invoicedCost: costRub,
         statisticalCostRub: costRub,
@@ -195,7 +200,7 @@ export interface BuildStatFormParams {
   period: string; // 'YYYY-MM'
   usdRate: number; // курс ЦБ на 1-е число месяца
   orders: N8nOrderItem[]; // только заказы этой страны
-  tnvedMap: Record<string, { code: string; name: string }>;
+  tnvedMap: Record<string, { code: string; name: string; unit: string | null }>;
   signingDate: string; // ISO: '2026-04-01T10:00:00'
 }
 
@@ -274,6 +279,9 @@ export async function buildStatFormXml(
         AdditionalInformation:
           'товары, вывозимые в рамках интернет-торговли в адрес физических лиц',
         NetWeightQuantity: g.netWeight,
+        SupplementaryQuantity: g.unit
+          ? { GoodsQuantity: g.totalQuantity, MeasureUnitQualifierCode: g.unit }
+          : null,
         InvoicedCost: g.invoicedCost,
         StatisticalCostRUB: g.statisticalCostRub,
         StatisticalCostUSD: g.statisticalCostUsd,

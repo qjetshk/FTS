@@ -40,11 +40,11 @@ export class StatformService {
         organizationId,
         tnvedCode: { not: null },
       },
-      select: { sku: true, tnvedCode: true, tnvedName: true },
+      select: { sku: true, tnvedCode: true, tnvedName: true, tnvedUnit: true },
     });
 
     const tnvedMap = Object.fromEntries(
-      products.map((p) => [p.sku, { code: p.tnvedCode!, name: p.tnvedName! }]),
+      products.map((p) => [p.sku, { code: p.tnvedCode!, name: p.tnvedName!, unit: p.tnvedUnit ?? null }]),
     );
 
     // ── 4. Курс USD с ЦБ РФ на первое число отчётного месяца ─────────────────
