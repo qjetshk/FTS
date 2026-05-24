@@ -212,6 +212,9 @@ body {
 @media (max-width: 640px) {
   .hero-long { display: none !important; }
   .hero-short { display: inline !important; }
+  /* Hero: reduce spacing and font */
+  .hero-section { padding-top: 72px !important; padding-bottom: 72px !important; }
+  .hero-h1 { font-size: 34px !important; line-height: 1.08 !important; }
   /* Hero form: stack vertically, full width */
   .hero-cta-row {
     flex-direction: column !important;
@@ -226,6 +229,9 @@ body {
     width: 100% !important;
     justify-content: center !important;
   }
+}
+@media (max-width: 400px) {
+  .hero-h1 { font-size: 28px !important; }
 }
 @media (max-width: 560px) {
   .pain-tl-row {

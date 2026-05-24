@@ -32,7 +32,7 @@ function Toast({ toast, onClose }: { toast: ToastState; onClose: () => void }) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -12, scale: 0.96 }}
       transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-      className="fixed top-5 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-3 px-4 py-3 rounded-[var(--radius-lg)] min-w-[280px] max-w-[480px] w-max"
+      className="fixed top-5 left-4 right-4 z-[200] flex items-center gap-3 px-4 py-3 rounded-[var(--radius-lg)] sm:left-1/2 sm:right-auto sm:w-max sm:-translate-x-1/2 sm:min-w-[280px] sm:max-w-[480px]"
       style={{
         background: "var(--background)",
         border: `1.5px solid ${ok ? "var(--primary)" : "#ef4444"}`,

@@ -154,7 +154,7 @@ export function Hero() {
   }, []);
 
   return (
-    <section className="flex items-center" style={{ paddingTop: 120, paddingBottom: 160, background: "var(--background)" }}>
+    <section className="hero-section flex items-center" style={{ paddingTop: 120, paddingBottom: 160, background: "var(--background)" }}>
       <div className="container-page hero-grid w-full" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}>
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -168,7 +168,7 @@ export function Hero() {
             Статформы ФТС<br />
             <span style={{ fontWeight: 500, color: "var(--text-secondary)" }}>
               <span className="hero-long">для Ozon-селлеров — автоматом</span>
-              <span className="hero-short hidden">для Ozon-селлеров</span>
+              <span className="hero-short hidden">для Ozon-селлеров — автоматом</span>
             </span>
           </h1>
 
