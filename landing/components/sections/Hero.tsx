@@ -167,13 +167,13 @@ export function Hero() {
           >
             Статформы ФТС<br />
             <span style={{ fontWeight: 500, color: "var(--text-secondary)" }}>
-              <span className="hero-long">для Ozon-селлеров — автоматом</span>
-              <span className="hero-short hidden">для Ozon-селлеров — автоматом</span>
+              <span className="hero-long">для Озон-селлеров — без ручного заполнения</span>
+              <span className="hero-short hidden">для Озон-селлеров</span>
             </span>
           </h1>
 
           <p className="mb-9" style={{ font: "400 18px/1.6 var(--font-sans)", color: "var(--text-secondary)", maxWidth: "36ch" }}>
-            Подключаешь Ozon API один раз — каждое 1-е число XML готов автоматически.
+            Подключаешь Ozon API один раз — и каждое 1-е число статформа для ФТС готова. Без 1С, работает на УСН и НПД.
           </p>
 
           <HeroCta />

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { PlugIcon, BuildingIcon, Code2Icon, RefreshCwIcon, FileDownIcon } from "lucide-react";
 
 const STEPS = [
-  { n: "01", icon: PlugIcon, title: "Подключите Ozon", body: "Введи Client ID и API ключ один раз в настройках. Доступ только на чтение отгрузок — сервис не может ничего менять в твоём кабинете." },
+  { n: "01", icon: PlugIcon, title: "Подключите Ozon", body: "Введи Client ID и API-ключ Ozon один раз в настройках. Доступ только на чтение отгрузок — сервис не может ничего менять в твоём кабинете." },
   { n: "02", icon: BuildingIcon, title: "Заполните данные организации", body: "Основные данные подтягиваем сами — тебе остается только заполнить несколько полей. Далее данные об организации будут подставляться сами." },
   { n: "03", icon: Code2Icon, title: "Сервис подбирает коды ТН ВЭД", body: "Для каждого SKU предлагаем подходящий код по справочнику ФТС. Ты подтверждаешь — и больше к этой рутине не возвращаешься." },
   { n: "04", icon: RefreshCwIcon, title: "Автоматическая генерация 1-го числа", body: "Каждый месяц 1-го числа сервис забирает отгрузки за прошлый месяц из Ozon и собирает XML по XSD-схеме ФТС 5.24.0." },
@@ -58,7 +58,7 @@ export function HowItWorks() {
       {/* Header */}
       <div style={{ textAlign: "center", maxWidth: 620, margin: "0 auto", padding: "0 24px" }}>
         <div style={{ font: "600 11px/1 var(--font-sans)", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 14 }}>КАК ЭТО РАБОТАЕТ</div>
-        <h2 style={{ margin: 0, font: "700 44px/1.1 var(--font-sans)", color: "var(--text-primary)", letterSpacing: "-0.025em" }}>Пять шагов до сданной формы</h2>
+        <h2 style={{ margin: 0, font: "700 44px/1.1 var(--font-sans)", color: "var(--text-primary)", letterSpacing: "-0.025em" }}>Как подать статформу Озон: пять шагов</h2>
         <p style={{ margin: "16px auto 0", maxWidth: 500, font: "400 17px/1.55 var(--font-sans)", color: "var(--text-secondary)" }}>Подключение один раз — дальше всё работает само в фоне.</p>
       </div>
 
