@@ -164,3 +164,6 @@ back/.docker/
 CLAUDE.md
 !landing/CLAUDE.md
 n8n/
+
+*storybook.log
+storybook-static
