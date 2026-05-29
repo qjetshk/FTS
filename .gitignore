@@ -123,6 +123,10 @@ front/.turbo
 front/coverage
 front/next-env.d.ts
 front/*.tsbuildinfo
+front/.env*
+front/playwright-report/
+front/test-results/
+front/.claude/
 
 # =====================================================
 # LANDING (Next.js)
