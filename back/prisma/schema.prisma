@@ -26,6 +26,8 @@ model User {
   passwordResetToken  String?   @unique @map("password_reset_token")
   passwordResetExpiry DateTime? @map("password_reset_expiry")
 
+  isOnboardingComplete Boolean @default(false) @map("is_onboarding_complete")
+
   // Подписка
   plan           PLAN        @default(TRIAL)
   planExpiresAt  DateTime?   @map("plan_expires_at")
@@ -85,6 +87,7 @@ model Organization {
   kpp    String? // ИП не имеют КПП, поэтому опционально
   okato5 String  @map("okato_5")
 
+  fullAddress String? @map("full_address")
   country    String
   region     String
   city       String

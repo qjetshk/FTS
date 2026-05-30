@@ -9,7 +9,7 @@ const productApi = baseApi.injectEndpoints({
       providesTags: ["Product"],
     }),
     getProductsSnapshot: build.query<ProductSnapshot[], number>({
-      query: (clientId) => `/products/snapshot/${clientId}`,
+      query: (clientId) => `/products/snapshot-user/${clientId}`,
     }),
     updateTnved: build.mutation<void, {
       productId: number

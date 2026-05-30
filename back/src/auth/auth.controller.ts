@@ -70,4 +70,11 @@ export class AuthController {
   async getMe(@CurrentUser() user: JwtPayload) {
     return this.authService.getMe(user.id);
   }
+
+  @Post('complete-onboarding')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async completeOnboarding(@CurrentUser() user: JwtPayload) {
+    return this.authService.completeOnboarding(user.id);
+  }
 }

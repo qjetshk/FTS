@@ -1,28 +1,30 @@
 import { z } from "zod"
 
+const str = (msg: string) => z.string().trim().min(1, msg)
+const strOpt = () => z.string().trim().optional()
+
 export const orgFormSchema = z.object({
-  fullAddress: z.string().min(1, "Введите адрес"),
-  country: z.string().min(1, "Введите страну"),
-  region: z.string().min(1, "Введите регион"),
-  city: z.string().min(1, "Введите город"),
-  street: z.string().optional(),
-  house: z.string().optional(),
-  room: z.string().optional(),
-  postalCode: z.string().min(1, "Введите индекс"),
+  street: strOpt(),
+  house: strOpt(),
+  room: strOpt(),
+  postalCode: strOpt(),
 
-  declarantName: z.string().optional(),
-  declarantSurname: z.string().optional(),
-  declarantPatronymic: z.string().optional(),
-  declarantPosition: z.string().optional(),
-  declarantEmail: z.string().email("Некорректный email").optional().or(z.literal("")),
-  declarantPhone: z.string().optional(),
+  declarantName: strOpt(),
+  declarantSurname: strOpt(),
+  declarantPatronymic: strOpt(),
+  declarantPosition: strOpt(),
+  declarantEmail: z.email("Некорректный email").optional().or(z.literal("")),
+  declarantPhone: z.string().trim()
+    .regex(/^\+?[\d\s\-\(\)]+$/, "Только цифры, +, пробелы, скобки, дефис")
+    .refine((v) => v.replace(/\D/g, "").length >= 11, "Минимум 11 цифр")
+    .optional().or(z.literal("")),
 
-  docTypeCode: z.string().min(1, "Выберите тип документа"),
+  docTypeCode: str("Выберите тип документа"),
   docTypeShort: z.string(),
-  docSeries: z.string().optional(),
-  docNumber: z.string().min(1, "Введите номер документа"),
-  docIssuedBy: z.string().min(1, "Введите кем выдан"),
-  docIssuedAt: z.string().min(1, "Введите дату выдачи"),
+  docSeries: z.string().trim().min(1, "Введите серию").regex(/^[a-zA-Zа-яА-ЯёЁ0-9\s\-]+$/, "Только буквы, цифры и дефис"),
+  docNumber: z.string().trim().min(1, "Введите номер документа").regex(/^[a-zA-Zа-яА-ЯёЁ0-9\s\-]+$/, "Только буквы, цифры и дефис"),
+  docIssuedBy: str("Введите кем выдан"),
+  docIssuedAt: str("Введите дату выдачи"),
 })
 
 export type OrgFormValues = z.infer<typeof orgFormSchema>

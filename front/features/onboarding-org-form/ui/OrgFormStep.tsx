@@ -3,11 +3,16 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
+import * as React from "react"
+import { useState } from "react"
+import { ChevronsUpDown } from "lucide-react"
 import {
   Form, FormField, FormItem, FormLabel, FormControl, FormMessage,
   Button, Input,
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Popover, PopoverContent, PopoverTrigger,
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/shared/ui"
+import { cn } from "@/shared/lib"
 import {
   useUpdateOrganizationMutation,
   useUpdateDeclarantMutation,
@@ -45,10 +50,6 @@ export function OrgFormStep({ org, onComplete }: Props) {
   const form = useForm<OrgFormValues>({
     resolver: zodResolver(orgFormSchema),
     defaultValues: {
-      fullAddress: org.house ? "" : "",
-      country: org.country,
-      region: org.region,
-      city: org.city,
       street: org.street ?? "",
       house: org.house ?? "",
       room: org.room ?? "",
@@ -75,17 +76,39 @@ export function OrgFormStep({ org, onComplete }: Props) {
       toast.error("Не найден декларант")
       return
     }
+    if (isIp) {
+      let hasError = false
+      if (!values.street?.trim()) { form.setError("street", { message: "Введите улицу" }); hasError = true }
+      if (!values.house?.trim()) { form.setError("house", { message: "Введите дом" }); hasError = true }
+      if (!values.postalCode?.trim()) { form.setError("postalCode", { message: "Введите индекс" }); hasError = true }
+      if (hasError) return
+    }
     try {
+      const street = isIp ? values.street : (org.street ?? undefined)
+      const house = isIp ? values.house : (org.house ?? undefined)
+      const room = isIp ? (values.room || undefined) : (org.room ?? undefined)
+      const postalCode = isIp ? values.postalCode : org.postalCode
+
+      const fullAddress = [
+        postalCode,
+        org.country,
+        org.region,
+        org.city,
+        street,
+        house,
+        room,
+      ].filter(Boolean).join(", ")
+
       await updateOrg({
         id: org.id,
-        fullAddress: values.fullAddress,
-        country: values.country,
-        region: values.region,
-        city: values.city,
-        street: values.street || undefined,
-        house: values.house || undefined,
-        room: values.room || undefined,
-        postalCode: values.postalCode,
+        fullAddress,
+        country: org.country,
+        region: org.region,
+        city: org.city,
+        street,
+        house,
+        room,
+        postalCode,
       }).unwrap()
 
       await updateDeclarant({
@@ -93,7 +116,7 @@ export function OrgFormStep({ org, onComplete }: Props) {
         name: isIp ? org.declarant.name : (values.declarantName || null),
         surname: isIp ? org.declarant.surname : (values.declarantSurname || null),
         patronymic: isIp ? org.declarant.patronymic : (values.declarantPatronymic || null),
-        position: values.declarantPosition || null,
+        position: isIp ? "Индивидуальный предприниматель" : (values.declarantPosition || null),
         email: values.declarantEmail || null,
         phone: values.declarantPhone || null,
       }).unwrap()
@@ -141,31 +164,36 @@ export function OrgFormStep({ org, onComplete }: Props) {
           <section className="flex flex-col gap-3">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Адрес</h3>
             <div className="grid grid-cols-2 gap-3">
-              {(["country", "region", "city", "postalCode"] as const).map((f) => (
-                <FormField key={f} control={form.control} name={f} render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{{ country: "Страна", region: "Регион", city: "Город", postalCode: "Индекс" }[f]}</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              ))}
-              <FormField control={form.control} name="fullAddress" render={({ field }) => (
-                <FormItem className="col-span-2">
-                  <FormLabel>Полный адрес</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              {(["street", "house", "room"] as const).map((f) => (
-                <FormField key={f} control={form.control} name={f} render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{{ street: "Улица", house: "Дом", room: "Офис/кв." }[f]}</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              ))}
+              <DisabledField label="Страна" value={org.country} />
+              <DisabledField label="Регион" value={org.region} />
+              <DisabledField label="Город" value={org.city} />
+              {isIp ? (
+                <>
+                  <FormField control={form.control} name="postalCode" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Индекс</FormLabel>
+                      <FormControl><Input {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  {(["street", "house", "room"] as const).map((f) => (
+                    <FormField key={f} control={form.control} name={f} render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{{ street: "Улица", house: "Дом", room: "Офис/кв." }[f]}</FormLabel>
+                        <FormControl><Input {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  ))}
+                </>
+              ) : (
+                <>
+                  <DisabledField label="Индекс" value={org.postalCode} />
+                  <DisabledField label="Улица" value={org.street} />
+                  <DisabledField label="Дом" value={org.house} />
+                  <DisabledField label="Офис/кв." value={org.room} />
+                </>
+              )}
             </div>
           </section>
 
@@ -192,10 +220,22 @@ export function OrgFormStep({ org, onComplete }: Props) {
                   ))}
                 </>
               )}
-              {(["declarantPosition", "declarantEmail", "declarantPhone"] as const).map((f) => (
+              {isIp
+                ? <DisabledField label="Должность" value="Индивидуальный предприниматель" />
+                : (
+                  <FormField control={form.control} name="declarantPosition" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Должность</FormLabel>
+                      <FormControl><Input {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                )
+              }
+              {(["declarantEmail", "declarantPhone"] as const).map((f) => (
                 <FormField key={f} control={form.control} name={f} render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{{ declarantPosition: "Должность", declarantEmail: "Email", declarantPhone: "Телефон" }[f]}</FormLabel>
+                    <FormLabel>{{ declarantEmail: "Email", declarantPhone: "Телефон" }[f]}</FormLabel>
                     <FormControl><Input type={f === "declarantEmail" ? "email" : "text"} {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -208,31 +248,59 @@ export function OrgFormStep({ org, onComplete }: Props) {
           <section className="flex flex-col gap-3">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Документ декларанта</h3>
             <div className="grid grid-cols-2 gap-3">
-              <FormField control={form.control} name="docTypeCode" render={({ field }) => (
-                <FormItem className="col-span-2">
-                  <FormLabel>Тип документа</FormLabel>
-                  <Select
-                    value={field.value}
-                    onValueChange={(val) => {
-                      field.onChange(val)
-                      const found = DOCUMENT_TYPES.find((d) => d.code === val)
-                      if (found) form.setValue("docTypeShort", found.short)
-                    }}
-                  >
-                    <FormControl>
-                      <SelectTrigger><SelectValue placeholder="Выберите тип..." /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="max-h-60">
-                      {DOCUMENT_TYPES.map((d) => (
-                        <SelectItem key={d.code} value={d.code}>
-                          {d.short} — {d.code}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
+              <FormField control={form.control} name="docTypeCode" render={({ field, fieldState }) => {
+                const [open, setOpen] = useState(false)
+                const scrollY = React.useRef(0)
+                const handleOpenChange = (newOpen: boolean) => {
+                  if (newOpen) scrollY.current = window.scrollY
+                  setOpen(newOpen)
+                  if (newOpen) requestAnimationFrame(() => window.scrollTo(0, scrollY.current))
+                }
+                const selected = DOCUMENT_TYPES.find((d) => d.code === field.value)
+                return (
+                  <FormItem className="col-span-2">
+                    <FormLabel>Тип документа</FormLabel>
+                    <Popover open={open} onOpenChange={handleOpenChange}>
+                      <PopoverTrigger
+                        className={cn(
+                          "flex h-9 w-full items-center justify-between rounded-md border bg-transparent px-3 py-2 text-sm shadow-sm transition-colors",
+                          fieldState.error ? "border-destructive" : "border-input",
+                          !selected && "text-muted-foreground"
+                        )}
+                      >
+                          {selected ? selected.name : "Выберите тип..."}
+                        <ChevronsUpDown className="size-4 opacity-50 shrink-0 ml-2" />
+                      </PopoverTrigger>
+                      <PopoverContent className="w-(--anchor-width) min-w-80 p-0" align="start">
+                        <Command className="bg-background">
+                          <CommandInput placeholder="Поиск..." autoFocus={false} />
+                          <CommandList className="max-h-60">
+                            <CommandEmpty>Ничего не найдено</CommandEmpty>
+                            <CommandGroup>
+                              {DOCUMENT_TYPES.map((d) => (
+                                <CommandItem
+                                  key={d.code}
+                                  value={`${d.name} ${d.short} ${d.code}`}
+                                  data-checked={field.value === d.code}
+                                  className="data-selected:bg-transparent data-selected:text-foreground cursor-pointer hover:bg-accent rounded-sm"
+                                  onSelect={() => {
+                                    field.onChange(d.code)
+                                    form.setValue("docTypeShort", d.short)
+                                    setOpen(false)
+                                  }}
+                                >
+                                  {d.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )
+              }} />
 
               {selectedTypeCode && (
                 <div className="col-span-2 flex flex-col gap-1.5">

@@ -8,6 +8,7 @@ export type User = {
   planExpiresAt: string | null
   createdAt: string
   avatarUrl: string | null
+  isOnboardingComplete: boolean
 }
 
 export type AuthResponse = {

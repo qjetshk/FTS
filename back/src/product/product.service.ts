@@ -1,7 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
-import { TNVED_STATUS } from '@prisma/client';
 import { UpdateTnvedDto } from './dto/update-tnved.dto';
 import { UpdateCountryDto } from './dto/update-country.dto';
 import { GetProductsDto } from './dto/get-products.dto';
@@ -16,22 +15,29 @@ export class ProductService {
       select: { id: true },
     });
 
-    return this.prisma.product.create({
-      data: {
-        productId: dto.productId,
-        offerId: dto.offerId,
-        sku: dto.sku,
-        name: dto.name,
-        description: dto.description,
-        category: dto.category,
-        categoryPath: dto.categoryPath,
-        primaryImg: dto.primaryImg,
-        images: dto.images ?? [],
-        country: dto.country,
-        countriesOfOrigin: dto.countriesOfOrigin ?? [],
-        countryConflict: dto.countryConflict,
-        organizationId: organization.id,
+    const data = {
+      offerId: dto.offerId,
+      sku: dto.sku,
+      name: dto.name,
+      description: dto.description,
+      category: dto.category,
+      categoryPath: dto.categoryPath,
+      primaryImg: dto.primaryImg,
+      images: dto.images ?? [],
+      country: dto.country,
+      countriesOfOrigin: dto.countriesOfOrigin ?? [],
+      countryConflict: dto.countryConflict,
+    };
+
+    return this.prisma.product.upsert({
+      where: {
+        productId_organizationId: {
+          productId: dto.productId,
+          organizationId: organization.id,
+        },
       },
+      create: { ...data, productId: dto.productId, organizationId: organization.id },
+      update: data,
     });
   }
 
@@ -85,7 +91,7 @@ export class ProductService {
       select: { id: true },
     });
 
-    const product = await this.prisma.product.findUniqueOrThrow({
+    const product = await this.prisma.product.findUnique({
       where: {
         productId_organizationId: {
           productId: dto.productId,
@@ -94,6 +100,10 @@ export class ProductService {
       },
       select: { id: true },
     });
+
+    if (!product) {
+      throw new NotFoundException(`Product ${dto.productId} not found`);
+    }
 
     return this.prisma.$transaction([
       this.prisma.tnvedAlternative.deleteMany({
@@ -132,6 +142,8 @@ export class ProductService {
         name: true,
         categoryPath: true,
         tnvedStatus: true,
+        country: true,
+        countryConflict: true,
       },
     });
   }
@@ -152,6 +164,7 @@ export class ProductService {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
+        include: { tnvedAlternatives: true },
       }),
       this.prisma.product.count({
         where: { organizationId: organization.id },

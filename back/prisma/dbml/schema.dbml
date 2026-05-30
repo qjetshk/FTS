@@ -13,6 +13,7 @@ Table users {
   emailVerifyExpiry DateTime
   passwordResetToken String [unique]
   passwordResetExpiry DateTime
+  isOnboardingComplete Boolean [not null, default: false]
   plan PLAN [not null, default: 'TRIAL']
   planExpiresAt DateTime
   planStatus PLAN_STATUS [not null, default: 'ACTIVE']
@@ -43,6 +44,7 @@ Table organizations {
   ogrn String [unique, not null]
   kpp String
   okato5 String [not null]
+  fullAddress String
   country String [not null]
   region String [not null]
   city String [not null]

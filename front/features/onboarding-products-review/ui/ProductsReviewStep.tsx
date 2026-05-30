@@ -1,8 +1,8 @@
 "use client"
 
 import { Button } from "@/shared/ui"
-import { useGetProductsSnapshotQuery } from "@/entities/product"
-import { isNeedsAttention } from "@/entities/product"
+import { useGetProductsSnapshotQuery, isNeedsAttention } from "@/entities/product"
+import { useCompleteOnboardingMutation } from "@/entities/user"
 
 type Props = {
   clientId: number
@@ -13,13 +13,19 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
   const { data: snapshot = [], isLoading } = useGetProductsSnapshotQuery(clientId, {
     pollingInterval: 5000,
   })
+  const [completeOnboarding, { isLoading: completing }] = useCompleteOnboardingMutation()
 
   const total = snapshot.length
   const classified = snapshot.filter((p) => p.tnvedStatus !== null).length
   const needsAttention = snapshot.filter((p) =>
-    isNeedsAttention({ tnvedStatus: p.tnvedStatus, countryConflict: false, country: null })
+    isNeedsAttention({ tnvedStatus: p.tnvedStatus, countryConflict: p.countryConflict, country: p.country })
   ).length
   const allDone = total > 0 && classified === total && needsAttention === 0
+
+  const handleComplete = async () => {
+    await completeOnboarding()
+    onComplete()
+  }
 
   return (
     <div className="w-full max-w-2xl flex flex-col items-center gap-6">
@@ -51,8 +57,8 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
         Полная таблица с фильтрами доступна в разделе «Товары» дашборда.
       </p>
 
-      <Button onClick={onComplete} disabled={!allDone} className="w-full max-w-xs">
-        {allDone ? "Готово — перейти в дашборд" : "Дождитесь завершения классификации..."}
+      <Button onClick={handleComplete} disabled={!allDone || completing} className="w-full max-w-xs">
+        {completing ? "Сохраняем..." : allDone ? "Готово — перейти в дашборд" : "Дождитесь завершения классификации..."}
       </Button>
     </div>
   )

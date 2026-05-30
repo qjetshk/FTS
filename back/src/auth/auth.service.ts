@@ -153,6 +153,7 @@ export class AuthService {
         planExpiresAt: true,
         createdAt: true,
         avatarUrl: true,
+        isOnboardingComplete: true,
       },
     });
 
@@ -171,11 +172,20 @@ export class AuthService {
         planExpiresAt: true,
         createdAt: true,
         avatarUrl: true,
+        isOnboardingComplete: true,
       },
     });
 
     if (!user) throw new UnauthorizedException('Пользователь не найден');
 
     return user;
+  }
+
+  async completeOnboarding(userId: string) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { isOnboardingComplete: true },
+    });
+    return { message: 'Онбординг завершён' };
   }
 }

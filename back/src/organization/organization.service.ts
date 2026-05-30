@@ -130,19 +130,29 @@ export class OrganizationService {
     if (!res.ok) {
       throw new Error(`n8n company-info failed: ${res.status}`);
     }
-    return res.json();
+    await res.json();
+    return this.getFirstOrganization(userId);
   }
 
   classify(clientId: string): void {
     const n8nUrl = this.config.getOrThrow<string>('N8N_URL');
-    fetch(`${n8nUrl}/webhook/classify_TNVED`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.n8nToken()}`,
-      },
-      body: JSON.stringify({ client_id: clientId }),
-    }).catch(() => {});
+    this.prisma.organization
+      .findUnique({
+        where: { ozonClientId: Number(clientId) },
+        select: { ozonApiKey: true },
+      })
+      .then((org) => {
+        if (!org) return;
+        fetch(`${n8nUrl}/webhook/classify_TNVED`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.n8nToken()}`,
+          },
+          body: JSON.stringify({ client_id: clientId, api_key: org.ozonApiKey }),
+        });
+      })
+      .catch(() => {});
   }
 
   async updateOrganization(dto: UpdateOrganizationDto) {

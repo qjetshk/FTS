@@ -18,6 +18,10 @@ const authApi = baseApi.injectEndpoints({
       query: () => "/auth/@me",
       providesTags: ["User"],
     }),
+    completeOnboarding: build.mutation<{ message: string }, void>({
+      query: () => ({ url: "/auth/complete-onboarding", method: "POST" }),
+      invalidatesTags: ["User"],
+    }),
   }),
 })
 
@@ -26,4 +30,5 @@ export const {
   useRegisterMutation,
   useLogoutMutation,
   useMeQuery,
+  useCompleteOnboardingMutation,
 } = authApi

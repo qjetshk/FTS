@@ -15,6 +15,9 @@ const rawBaseQuery = fetchBaseQuery({
   },
 })
 
+// Mutex: гарантирует один refresh-запрос при параллельных 401
+let refreshingPromise: Promise<any> | null = null
+
 const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
   args,
   api,
@@ -23,23 +26,30 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
   let result = await rawBaseQuery(args, api, extraOptions)
 
   if (result.error?.status === 401) {
-    const refreshResult = await rawBaseQuery(
-      { url: "/auth/refresh", method: "POST" },
-      api,
-      extraOptions,
-    )
+    if (!refreshingPromise) {
+      refreshingPromise = rawBaseQuery(
+        { url: "/auth/refresh", method: "POST" },
+        api,
+        extraOptions,
+      )
+    }
 
-    if (refreshResult.data) {
-      const data = refreshResult.data as { accessToken: string; user: unknown }
-      localStorage.setItem("access_token", data.accessToken)
-      if (data.user) localStorage.setItem("user", JSON.stringify(data.user))
-      result = await rawBaseQuery(args, api, extraOptions)
-    } else {
-      localStorage.removeItem("access_token")
-      localStorage.removeItem("user")
-      if (typeof window !== "undefined") {
-        window.location.href = "/login"
+    try {
+      const refreshResult = await refreshingPromise
+      if (refreshResult.data) {
+        const data = refreshResult.data as { accessToken: string; user: unknown }
+        localStorage.setItem("access_token", data.accessToken)
+        if (data.user) localStorage.setItem("user", JSON.stringify(data.user))
+        result = await rawBaseQuery(args, api, extraOptions)
+      } else {
+        localStorage.removeItem("access_token")
+        localStorage.removeItem("user")
+        if (typeof window !== "undefined") {
+          window.location.href = "/login"
+        }
       }
+    } finally {
+      refreshingPromise = null
     }
   }
 
