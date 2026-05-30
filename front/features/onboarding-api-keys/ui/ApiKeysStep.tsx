@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, Button, Input } from "@/shared/ui"
 import { useCompanyInfoMutation, useClassifyMutation } from "@/entities/organization"
-import { useUser } from "@/entities/user"
+import { useMeQuery } from "@/entities/user"
 import { apiKeysSchema, type ApiKeysFormValues } from "../model/api-keys.schema"
 
 type Props = {
@@ -13,7 +13,7 @@ type Props = {
 }
 
 export function ApiKeysStep({ onComplete }: Props) {
-  const { user } = useUser()
+  const { data: user } = useMeQuery()
   const [companyInfo, { isLoading }] = useCompanyInfoMutation()
   const [classify] = useClassifyMutation()
 
@@ -23,11 +23,15 @@ export function ApiKeysStep({ onComplete }: Props) {
   })
 
   const onSubmit = async (values: ApiKeysFormValues) => {
+    if (!user) {
+      toast.error("Пользователь не найден, войдите заново")
+      return
+    }
     try {
       const orgData = await companyInfo({
         apiKey: values.apiKey,
         clientId: values.clientId,
-        userId: user!.id,
+        userId: user.id,
       }).unwrap()
 
       classify({ clientId: values.clientId })

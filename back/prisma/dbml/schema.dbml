@@ -165,6 +165,13 @@ Table stat_forms {
   }
 }
 
+Table tnved_lc {
+  id Int [pk, increment]
+  code String [unique, not null]
+  name String [not null]
+  unit String
+}
+
 Enum PLAN {
   TRIAL
   BASIC
