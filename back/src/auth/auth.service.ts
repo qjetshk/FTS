@@ -139,7 +139,7 @@ export class AuthService {
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: !isDev(this.config),
-      sameSite: isDev(this.config) ? 'lax' : 'strict',
+      sameSite: "none" /* isDev(this.config) ? 'lax' : 'strict' */,
       maxAge: convertExpireTime(refreshExpire),
       path: '/',
     });

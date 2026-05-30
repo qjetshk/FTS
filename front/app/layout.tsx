@@ -10,13 +10,13 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "FTS — Таможенная отчётность",
+  title: "easyfts — Таможенная отчётность",
   description: "Автоматизация статформ и классификации товаров для продавцов OZON",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru" className={`${inter.variable} h-full antialiased`}>
+    <html data-scroll-behavior="smooth" lang="ru" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full bg-background text-foreground">
         <Providers>{children}</Providers>
       </body>

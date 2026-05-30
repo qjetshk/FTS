@@ -93,7 +93,7 @@ function SidebarProvider({
     return () => mql.removeEventListener("change", onChange)
   }, [])
 
-  const state: SidebarState = open ? "expanded" : "collapsed"
+  const state: SidebarState = isMobile ? "expanded" : open ? "expanded" : "collapsed"
 
   return (
     <SidebarContext.Provider value={{ state, open, setOpen, openMobile, setOpenMobile, isMobile, toggleSidebar }}>
@@ -161,7 +161,7 @@ function Sidebar({ side = "left", variant = "sidebar", collapsible = "icon", cla
       data-variant={variant}
       data-side={side}
       className={cn(
-        "group/sidebar relative flex h-svh flex-col overflow-hidden bg-sidebar border-r border-sidebar-border",
+        "group/sidebar relative flex h-svh flex-col bg-sidebar border-r border-sidebar-border",
         "transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width]",
         state === "expanded" ? "w-(--sidebar-width)" : collapsible === "icon" ? "w-(--sidebar-collapsed-width)" : "w-0 border-r-0",
         variant === "floating" && "m-2 h-[calc(100svh-1rem)] rounded-xl border shadow-sm",
@@ -308,7 +308,8 @@ function SidebarMenuButton({ isActive = false, size = "default", tooltip, classN
   const collapsed = state === "collapsed"
 
   const buttonClass = cn(
-    "peer/menu-button flex w-full items-center gap-2.5 overflow-hidden rounded-md px-2 py-1.5",
+    "peer/menu-button flex w-full items-center overflow-hidden rounded-md px-2 py-1.5",
+    collapsed ? "gap-0" : "gap-2.5",
     "text-left text-sm text-sidebar-foreground outline-none ring-sidebar-ring",
     "cursor-pointer",
     // transition: width+padding for sidebar collapse, opacity for hover highlight
@@ -317,10 +318,10 @@ function SidebarMenuButton({ isActive = false, size = "default", tooltip, classN
     "hover:bg-sidebar-accent",
     "focus-visible:ring-2",
     "disabled:pointer-events-none disabled:opacity-50",
-    // active — slightly stronger bg, green icon + text
-    isActive
-      ? "bg-sidebar-accent text-primary [&>svg]:text-primary"
-      : "text-sidebar-foreground/80 [&>svg]:text-sidebar-foreground/50",
+    // active — green icon; collapsed: compact green-tinted chip, expanded: sidebar-accent bg
+    isActive && !collapsed && "bg-sidebar-accent text-primary [&>svg]:text-primary",
+    isActive && collapsed && "bg-primary/10 [&>svg]:text-primary",
+    !isActive && "text-sidebar-foreground/80 [&>svg]:text-sidebar-foreground/50",
     "[&>svg]:shrink-0 [&>svg]:transition-colors [&>svg]:duration-150",
     size === "sm" && "text-xs [&>svg]:size-3.5",
     size === "default" && "[&>svg]:size-4",

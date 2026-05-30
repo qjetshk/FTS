@@ -1,3 +1,4 @@
+export { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "./Form"
 export { Button, buttonVariants } from "./Button"
 export { Input } from "./Input"
 export { Badge, badgeVariants } from "./Badge"

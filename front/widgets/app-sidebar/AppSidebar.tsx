@@ -41,7 +41,7 @@ function Logo() {
         Ф
       </div>
       {!collapsed && (
-        <span className="font-semibold text-sm text-sidebar-foreground truncate">FTS</span>
+        <span className="font-semibold text-sm text-sidebar-foreground truncate">easyfts</span>
       )}
     </div>
   )
@@ -149,7 +149,7 @@ function UserFooter() {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 6 }}
           transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-          className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-border bg-popover shadow-lg z-50 overflow-hidden py-1">
+          className="absolute bottom-full left-0 w-52 mb-2 rounded-xl border border-border bg-popover shadow-lg z-50 overflow-hidden py-1">
           <div className="px-3 py-2 border-b border-border mb-1">
             <p className="text-xs font-medium truncate">Антон</p>
             <p className="text-xs text-muted-foreground truncate">antonm@example.com</p>

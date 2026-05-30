@@ -31,7 +31,6 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { title: "Все организации", url: ROUTES.organizations },
       { title: "Добавить организацию", url: `${ROUTES.organizations}/new` },
-      { title: "Настройки", url: `${ROUTES.organizations}/settings` },
     ],
   },
 ]
