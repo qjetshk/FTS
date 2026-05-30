@@ -57,7 +57,7 @@ export class AuthService {
         id: user.id,
       },
       data: {
-        avatarUrl: `https://api.dicebear.com/9.x/glass/svg?seed=${user.id}`,
+        avatarUrl: `https://api.dicebear.com/10.x/lorelei-neutral/svg?backgroundColorFillStops=3&backgroundColorAngle=112&backgroundColor=e2e8f0&seed=${user.id}`,
       },
     });
 
@@ -152,6 +152,7 @@ export class AuthService {
         planStatus: true,
         planExpiresAt: true,
         createdAt: true,
+        avatarUrl: true,
       },
     });
 
@@ -169,6 +170,7 @@ export class AuthService {
         planStatus: true,
         planExpiresAt: true,
         createdAt: true,
+        avatarUrl: true,
       },
     });
 

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import {
   ChevronRight,
@@ -30,6 +30,7 @@ import {
 } from "@/shared/ui"
 import { ROUTES } from "@/shared/config"
 import { cn } from "@/shared/lib"
+import { useUser, useLogoutMutation } from "@/entities/user"
 import { NAV_ITEMS } from "./nav.data"
 
 function Logo() {
@@ -123,11 +124,34 @@ function NavItems() {
 const MENU_ITEM_CLASS =
   "flex cursor-pointer items-center gap-2.5 w-full px-3 py-2 text-sm text-left rounded-md transition-colors hover:bg-sidebar-accent"
 
+function UserAvatar({ avatarUrl, name, size = 8 }: { avatarUrl: string | null; name: string; size?: number }) {
+  const initials = name.trim().charAt(0).toUpperCase()
+  const sizeClass = `size-${size}`
+  if (avatarUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={avatarUrl}
+        alt={name}
+        className={cn(sizeClass, "shrink-0 rounded-full object-cover")}
+      />
+    )
+  }
+  return (
+    <div className={cn(sizeClass, "shrink-0 flex items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-semibold")}>
+      {initials}
+    </div>
+  )
+}
+
 function UserFooter() {
   const { state } = useSidebar()
   const collapsed = state === "collapsed"
   const [menuOpen, setMenuOpen] = React.useState(false)
   const wrapperRef = React.useRef<HTMLDivElement>(null)
+  const { user } = useUser()
+  const [logout] = useLogoutMutation()
+  const router = useRouter()
 
   React.useEffect(() => {
     if (!menuOpen) return
@@ -140,6 +164,16 @@ function UserFooter() {
     return () => document.removeEventListener("mousedown", handler)
   }, [menuOpen])
 
+  const handleLogout = async () => {
+    setMenuOpen(false)
+    try {
+      await logout().unwrap()
+    } catch {}
+    localStorage.removeItem("access_token")
+    localStorage.removeItem("user")
+    router.replace(ROUTES.login)
+  }
+
   return (
     <div ref={wrapperRef} className="relative">
       <AnimatePresence>
@@ -151,8 +185,8 @@ function UserFooter() {
           transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
           className="absolute bottom-full left-0 w-52 mb-2 rounded-xl border border-border bg-popover shadow-lg z-50 overflow-hidden py-1">
           <div className="px-3 py-2 border-b border-border mb-1">
-            <p className="text-xs font-medium truncate">Антон</p>
-            <p className="text-xs text-muted-foreground truncate">antonm@example.com</p>
+            <p className="text-xs font-medium truncate">{user?.name}</p>
+            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
           </div>
 
           <Link
@@ -183,7 +217,7 @@ function UserFooter() {
           <div className="my-1 h-px bg-border mx-2" />
 
           <button
-            onClick={() => setMenuOpen(false)}
+            onClick={handleLogout}
             className={cn(MENU_ITEM_CLASS, "text-destructive hover:text-destructive")}
           >
             <LogOut strokeWidth={1.5} className="size-4 shrink-0" />
@@ -201,14 +235,12 @@ function UserFooter() {
             className="h-auto py-2"
             onClick={() => setMenuOpen((v) => !v)}
           >
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-semibold">
-              А
-            </div>
+            <UserAvatar avatarUrl={user?.avatarUrl ?? null} name={user?.name ?? ""} />
             {!collapsed && (
               <>
                 <div className="flex flex-1 flex-col text-left text-xs min-w-0">
-                  <span className="font-medium text-sidebar-foreground truncate">Антон</span>
-                  <span className="text-muted-foreground truncate">antonm@example.com</span>
+                  <span className="font-medium text-sidebar-foreground truncate">{user?.name}</span>
+                  <span className="text-muted-foreground truncate">{user?.email}</span>
                 </div>
                 <ChevronsUpDown strokeWidth={1.5} className="ml-auto size-4 text-muted-foreground shrink-0" />
               </>

@@ -7,6 +7,7 @@ export type User = {
   plan: UserPlan
   planExpiresAt: string | null
   createdAt: string
+  avatarUrl: string | null
 }
 
 export type AuthResponse = {
