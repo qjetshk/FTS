@@ -13,6 +13,7 @@ import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ApiKeyGuard } from 'src/guards/api-key.guard';
 import { UpdateTnvedDto } from './dto/update-tnved.dto';
+import { UpdateCountryDto } from './dto/update-country.dto';
 import { JwtAuthGuard } from 'src/guards/jwt.guard';
 import { GetProductsDto } from './dto/get-products.dto';
 
@@ -58,6 +59,13 @@ export class ProductController {
   @UseGuards(JwtAuthGuard)
   async updateTnved(@Body() dto: UpdateTnvedDto) {
     return this.productService.updateTnved(dto);
+  }
+
+  @Post('update-country')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async updateCountry(@Body() dto: UpdateCountryDto) {
+    return this.productService.updateCountry(dto);
   }
 
   @Get('get-all')

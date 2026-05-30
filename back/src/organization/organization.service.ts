@@ -3,14 +3,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
+import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { UpdateDeclarantDto } from './dto/update-declarant.dto';
 import { CreateDocumentDto } from './dto/create-document.dto';
 
 @Injectable()
 export class OrganizationService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private config: ConfigService,
+  ) {}
 
   async createOrganization(dto: CreateOrganizationDto) {
     const exists = await this.prisma.organization.findUnique({
@@ -23,7 +28,7 @@ export class OrganizationService {
       throw new ConflictException('Такая организация уже существует!');
     }
 
-    const organization = await this.prisma.organization.create({
+    await this.prisma.organization.create({
       data: {
         city: dto.city,
         country: dto.country,
@@ -57,19 +62,18 @@ export class OrganizationService {
 
   async getFirstOrganization(userId: string) {
     const organization = await this.prisma.organization.findFirst({
-      where: {
-        userId,
-      },
-      omit: {
-        ozonApiKey: true,
-        ozonClientId: true,
-      },
+      where: { userId },
       include: {
         declarant: {
           select: {
+            id: true,
             name: true,
             surname: true,
             patronymic: true,
+            position: true,
+            email: true,
+            phone: true,
+            document: true,
           },
         },
       },
@@ -104,6 +108,37 @@ export class OrganizationService {
     return organization;
   }
 
+  async companyInfo(apiKey: string, clientId: string, userId: string) {
+    const n8nUrl = this.config.getOrThrow<string>('N8N_URL');
+    const res = await fetch(`${n8nUrl}/webhook/get_company_info`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey, client_id: clientId, user_id: userId }),
+    });
+    if (!res.ok) {
+      throw new Error(`n8n company-info failed: ${res.status}`);
+    }
+    return res.json();
+  }
+
+  classify(clientId: string): void {
+    const n8nUrl = this.config.getOrThrow<string>('N8N_URL');
+    fetch(`${n8nUrl}/webhook/classify_TNVED`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_id: clientId }),
+    }).catch(() => {});
+  }
+
+  async updateOrganization(dto: UpdateOrganizationDto) {
+    const { id, ...rest } = dto;
+    const data = Object.fromEntries(
+      Object.entries(rest).filter(([, v]) => v !== null && v !== undefined),
+    ) as Record<string, string>;
+    await this.prisma.organization.update({ where: { id }, data });
+    return { message: 'Организация обновлена!' };
+  }
+
   async getDeclarantById(id: string) {
     const declarant = await this.prisma.declarant.findUniqueOrThrow({
       where: {
@@ -119,13 +154,7 @@ export class OrganizationService {
 
   async updateDeclarant(dto: UpdateDeclarantDto) {
     const { id, ...data } = dto;
-    const updated = await this.prisma.declarant.update({
-      where: {
-        id: dto.id,
-      },
-      data,
-    });
-
+    await this.prisma.declarant.update({ where: { id }, data });
     return { message: 'Декларант успешно обновлен!' };
   }
 

@@ -16,6 +16,9 @@ import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { ApiKeyGuard } from 'src/guards/api-key.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { JwtAuthGuard } from 'src/guards/jwt.guard';
+import { UpdateOrganizationDto } from './dto/update-organization.dto';
+import { CompanyInfoDto } from './dto/company-info.dto';
+import { ClassifyDto } from './dto/classify.dto';
 import { UpdateDeclarantDto } from './dto/update-declarant.dto';
 import { CreateDocumentDto } from './dto/create-document.dto';
 
@@ -44,11 +47,27 @@ export class OrganizationController {
   }
 
 
-  /*   @Post('update')
+  @Post('company-info')
   @HttpCode(HttpStatus.OK)
-  async updateOrganization(@Body() dto: ) {
+  @UseGuards(JwtAuthGuard)
+  async companyInfo(@Body() dto: CompanyInfoDto) {
+    return this.organizationService.companyInfo(dto.apiKey, dto.clientId, dto.userId);
+  }
 
-  } */
+  @Post('classify')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async classify(@Body() dto: ClassifyDto) {
+    this.organizationService.classify(dto.clientId);
+    return { message: 'Классификация запущена' };
+  }
+
+  @Put('update')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async updateOrganization(@Body() dto: UpdateOrganizationDto) {
+    return this.organizationService.updateOrganization(dto);
+  }
 
   @Get('declarant/:id')
   @HttpCode(HttpStatus.OK)

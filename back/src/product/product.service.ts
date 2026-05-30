@@ -3,6 +3,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { TNVED_STATUS } from '@prisma/client';
 import { UpdateTnvedDto } from './dto/update-tnved.dto';
+import { UpdateCountryDto } from './dto/update-country.dto';
 import { GetProductsDto } from './dto/get-products.dto';
 
 @Injectable()
@@ -163,5 +164,27 @@ export class ProductService {
       page,
       limit,
     };
+  }
+
+  async updateCountry(dto: UpdateCountryDto) {
+    const organization = await this.prisma.organization.findUniqueOrThrow({
+      where: { ozonClientId: dto.clientId },
+      select: { id: true },
+    });
+
+    await this.prisma.product.update({
+      where: {
+        productId_organizationId: {
+          productId: dto.productId,
+          organizationId: organization.id,
+        },
+      },
+      data: {
+        country: dto.country,
+        countryConflict: false,
+      },
+    });
+
+    return { message: 'Страна обновлена' };
   }
 }

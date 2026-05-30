@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { OrganizationModule } from './organization/organization.module';
 import { ProductModule } from './product/product.module';
 import { StatformModule } from './statform/statform.module';
+import { TnvedModule } from './tnved/tnved.module';
 import { DEFAULT_JOB_OPTIONS } from './queue/queue.constants';
 
 @Module({
@@ -31,6 +32,7 @@ import { DEFAULT_JOB_OPTIONS } from './queue/queue.constants';
     OrganizationModule,
     ProductModule,
     StatformModule,
+    TnvedModule,
   ],
 })
 export class AppModule {}

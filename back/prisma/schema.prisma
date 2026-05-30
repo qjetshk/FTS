@@ -265,3 +265,12 @@ enum TNVED_STATUS {
   VERIFIED_BY_USER
   VERIFIED_BY_LLM
 }
+
+model TnvedLc {
+  id   Int     @id @default(autoincrement())
+  code String  @unique
+  name String
+  unit String?
+
+  @@map("tnved_lc")
+}
