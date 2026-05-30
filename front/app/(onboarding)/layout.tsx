@@ -7,26 +7,24 @@ import { useMeQuery } from "@/entities/user"
 import { useGetFirstOrgQuery } from "@/entities/organization"
 import { ROUTES } from "@/shared/config"
 
-export function AuthGuard({ children }: { children: React.ReactNode }) {
+export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { data: user, isLoading: userLoading, isError: userError } = useMeQuery()
-  const { isLoading: orgLoading, isError: orgError } = useGetFirstOrgQuery(undefined, {
+  const { isLoading: orgLoading, isError: orgError, data: org } = useGetFirstOrgQuery(undefined, {
     skip: !user,
   })
 
   useEffect(() => {
     if (!userLoading && userError) {
-      localStorage.removeItem("access_token")
-      localStorage.removeItem("user")
       router.replace(ROUTES.login)
     }
   }, [userLoading, userError, router])
 
   useEffect(() => {
-    if (!userLoading && !orgLoading && user && orgError) {
-      router.replace(ROUTES.onboarding)
+    if (!userLoading && !orgLoading && user && !orgError && org) {
+      router.replace(ROUTES.statforms)
     }
-  }, [userLoading, orgLoading, user, orgError, router])
+  }, [userLoading, orgLoading, user, orgError, org, router])
 
   if (userLoading || (user && orgLoading)) {
     return (

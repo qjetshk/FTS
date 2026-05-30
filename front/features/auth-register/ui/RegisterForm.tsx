@@ -36,7 +36,7 @@ export function RegisterForm() {
       const result = await register(values).unwrap()
       localStorage.setItem("access_token", result.accessToken)
       localStorage.setItem("user", JSON.stringify(result.user))
-      router.push(ROUTES.dashboard)
+      router.push(ROUTES.onboarding)
     } catch {
       toast.error("Не удалось создать аккаунт. Возможно, email уже занят")
     }
