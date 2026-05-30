@@ -45,3 +45,13 @@ export {
   SidebarMenuSubItem,
   SidebarMenuSubButton,
 } from "./Sidebar"
+export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "./Select"
+export { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "./Dialog"
+export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./Tooltip"
+export { Popover, PopoverContent, PopoverTrigger } from "./Popover"
+export { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from "./Command"
+export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "./Table"
+export { Skeleton } from "./Skeleton"
+export { Calendar } from "./Calendar"
+export { Textarea } from "./Textarea"
+export { InputGroup, InputGroupText } from "./InputGroup"
