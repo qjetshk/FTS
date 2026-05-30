@@ -129,13 +129,11 @@ export class AuthService {
       expiresIn: refreshExpire,
     });
 
-    // Сохраняем refresh токен в БД
     const expiresAt = new Date(Date.now() + convertExpireTime(refreshExpire));
     await this.prisma.refreshToken.create({
       data: { token: refreshToken, userId, expiresAt },
     });
 
-    // Кладём refresh в httpOnly cookie
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: !isDev(this.config),
@@ -144,7 +142,20 @@ export class AuthService {
       path: '/',
     });
 
-    return { accessToken };
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        plan: true,
+        planStatus: true,
+        planExpiresAt: true,
+        createdAt: true,
+      },
+    });
+
+    return { accessToken, user };
   }
 
   async getMe(userId: string) {
