@@ -10,7 +10,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ReduxProvider>
         {children}
         <Toaster
-          position="bottom-right"
+          position="top-center"
           toastOptions={{
             classNames: {
               toast: "font-sans text-sm",
