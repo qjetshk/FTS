@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
@@ -15,7 +16,15 @@ export class OrganizationService {
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
+    private jwt: JwtService,
   ) {}
+
+  private n8nToken(): string {
+    return this.jwt.sign(
+      { service: 'fts-back' },
+      { secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'), expiresIn: '1m' },
+    );
+  }
 
   async createOrganization(dto: CreateOrganizationDto) {
     const exists = await this.prisma.organization.findUnique({
@@ -112,7 +121,10 @@ export class OrganizationService {
     const n8nUrl = this.config.getOrThrow<string>('N8N_URL');
     const res = await fetch(`${n8nUrl}/webhook/get_company_info`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.n8nToken()}`,
+      },
       body: JSON.stringify({ api_key: apiKey, client_id: clientId, user_id: userId }),
     });
     if (!res.ok) {
@@ -125,7 +137,10 @@ export class OrganizationService {
     const n8nUrl = this.config.getOrThrow<string>('N8N_URL');
     fetch(`${n8nUrl}/webhook/classify_TNVED`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.n8nToken()}`,
+      },
       body: JSON.stringify({ client_id: clientId }),
     }).catch(() => {});
   }
