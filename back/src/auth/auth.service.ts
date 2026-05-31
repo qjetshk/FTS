@@ -12,7 +12,6 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtPayload, StringValue } from './interfaces/jwt.interface';
 import { convertExpireTime } from 'src/utils/convert-expire-time.util';
-import { isDev } from 'src/utils/is-dev.util';
 import { PLAN, PLAN_STATUS } from '@prisma/client';
 
 @Injectable()
@@ -52,7 +51,7 @@ export class AuthService {
       },
     });
 
-    const setAvatar = await this.prisma.user.update({
+    await this.prisma.user.update({
       where: {
         id: user.id,
       },
@@ -136,8 +135,8 @@ export class AuthService {
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      secure: !isDev(this.config),
-      sameSite: "none" /* isDev(this.config) ? 'lax' : 'strict' */,
+      secure: true, // sameSite: "none" requires secure; ngrok always serves https
+      sameSite: "none",
       maxAge: convertExpireTime(refreshExpire),
       path: '/',
     });

@@ -29,9 +29,6 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
 
       <div className="shrink-0 text-center">
         <h2 className="text-lg font-semibold">Классификация товаров</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          ИИ автоматически определил коды ТН ВЭД для ваших товаров. Проверьте выделенные строки и исправьте ошибки — после этого можно перейти в дашборд.
-        </p>
         {classified < total && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center mt-1">
             <span className="size-1.5 rounded-full bg-primary animate-pulse" />

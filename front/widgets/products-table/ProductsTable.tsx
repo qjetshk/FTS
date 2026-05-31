@@ -13,7 +13,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 
 type Props = { clientId: number; className?: string }
 
-const HEADS = ["", "Название", "Категория", "Страна", "Артикул", "SKU", "ТН ВЭД", "Ед."]
+const HEADS = ["", "Название", "Категория", "Страна-изготовитель", "Артикул", "SKU", "ТН ВЭД", "Ед."]
 const DEFAULT_SIZES = [4, 18, 13, 13, 11, 7, 28, 6]
 const MIN_SIZES =     [3,  8,   6,   6,   5,  3,  8,   3]
 const MAIN_LIMIT = 15
@@ -49,7 +49,20 @@ function Row({ product, clientId, gridCols, variant }: {
   return (
     <div className={cn("grid border-b border-border/50 last:border-b-0", rowCls)} style={{ gridTemplateColumns: gridCols }}>
       <div className="flex items-center p-1.5 overflow-hidden">
-        {product.primaryImg ? <img src={product.primaryImg} alt="" className="size-8 object-cover rounded shrink-0" /> : <div className="size-8 rounded bg-muted shrink-0" />}
+        {product.primaryImg ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <img src={product.primaryImg} alt="" className="size-8 object-cover rounded shrink-0 cursor-zoom-in" />
+              </TooltipTrigger>
+              <TooltipContent side="right" className="p-1 bg-background border shadow-lg">
+                <img src={product.primaryImg} alt="" className="size-40 object-contain rounded" />
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <div className="size-8 rounded bg-muted shrink-0" />
+        )}
       </div>
       <div className="flex items-center py-2 px-2 overflow-hidden"><TCell value={product.name} /></div>
       <div className="flex items-center py-2 px-2 overflow-hidden">

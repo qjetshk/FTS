@@ -27,11 +27,11 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 
   if (result.error?.status === 401) {
     if (!refreshingPromise) {
-      refreshingPromise = rawBaseQuery(
+      refreshingPromise = Promise.resolve(rawBaseQuery(
         { url: "/auth/refresh", method: "POST" },
         api,
         extraOptions,
-      )
+      ))
     }
 
     try {
@@ -42,11 +42,13 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
         if (data.user) localStorage.setItem("user", JSON.stringify(data.user))
         result = await rawBaseQuery(args, api, extraOptions)
       } else {
-        localStorage.removeItem("access_token")
-        localStorage.removeItem("user")
-        if (typeof window !== "undefined") {
-          window.location.href = "/login"
+        const status = (refreshResult.error as FetchBaseQueryError | undefined)?.status
+        if (status === 401 || status === 403) {
+          localStorage.removeItem("access_token")
+          localStorage.removeItem("user")
+          if (typeof window !== "undefined") window.location.href = "/login"
         }
+        // network / 5xx — don't log out, just return original error
       }
     } finally {
       refreshingPromise = null
