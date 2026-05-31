@@ -3,6 +3,7 @@
 import { Button } from "@/shared/ui"
 import { useGetProductsSnapshotQuery, isNeedsAttention } from "@/entities/product"
 import { useCompleteOnboardingMutation } from "@/entities/user"
+import { ProductsTable } from "@/widgets/products-table/ProductsTable"
 
 type Props = {
   clientId: number
@@ -10,56 +11,50 @@ type Props = {
 }
 
 export function ProductsReviewStep({ clientId, onComplete }: Props) {
-  const { data: snapshot = [], isLoading } = useGetProductsSnapshotQuery(clientId, {
+  const { data: snapshot = [] } = useGetProductsSnapshotQuery(clientId, {
     pollingInterval: 5000,
+    skip: !clientId,
   })
   const [completeOnboarding, { isLoading: completing }] = useCompleteOnboardingMutation()
 
   const total = snapshot.length
-  const classified = snapshot.filter((p) => p.tnvedStatus !== null).length
-  const needsAttention = snapshot.filter((p) =>
+  const classified = snapshot.filter(p => p.tnvedStatus !== null).length
+  const needsAttention = snapshot.filter(p =>
     isNeedsAttention({ tnvedStatus: p.tnvedStatus, countryConflict: p.countryConflict, country: p.country })
   ).length
   const allDone = total > 0 && classified === total && needsAttention === 0
 
-  const handleComplete = async () => {
-    await completeOnboarding()
-    onComplete()
-  }
-
   return (
-    <div className="w-full max-w-2xl flex flex-col items-center gap-6">
-      <div className="text-center">
-        <h2 className="text-xl font-semibold">Классификация товаров</h2>
+    <div className="w-full h-[calc(100vh-7rem)] flex flex-col gap-3">
+
+      <div className="shrink-0 text-center">
+        <h2 className="text-lg font-semibold">Классификация товаров</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          ИИ классифицирует ваши товары. Проверьте результаты и исправьте при необходимости.
+          ИИ автоматически определил коды ТН ВЭД для ваших товаров. Проверьте выделенные строки и исправьте ошибки — после этого можно перейти в дашборд.
         </p>
+        {classified < total && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center mt-1">
+            <span className="size-1.5 rounded-full bg-primary animate-pulse" />
+            Идёт классификация: {classified}/{total}
+          </div>
+        )}
+        <div className="flex items-center justify-center gap-4 mt-2">
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-2.5 rounded-sm bg-red-400 shrink-0" />Нет страны или их конфликт /  ИИ сомневается в ТН ВЭД</span>
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-2.5 rounded-sm bg-yellow-300 shrink-0" />ИИ классифицировал сам, требует проверки</span>
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-2.5 rounded-sm bg-green-400 shrink-0" />Проверен ИИ</span>
+        </div>
       </div>
 
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">Загружаем товары...</p>
-      ) : (
-        <div className="flex gap-6 text-center">
-          <div>
-            <p className="text-2xl font-semibold">{classified}/{total}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Классифицировано</p>
-          </div>
-          {needsAttention > 0 && (
-            <div>
-              <p className="text-2xl font-semibold text-yellow-600">{needsAttention}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Требует проверки</p>
-            </div>
-          )}
-        </div>
-      )}
+      <div className="flex-1 min-h-0">
+        <ProductsTable clientId={clientId} />
+      </div>
 
-      <p className="text-xs text-muted-foreground">
-        Полная таблица с фильтрами доступна в разделе «Товары» дашборда.
-      </p>
+      <div className="shrink-0">
+        <Button onClick={async () => { await completeOnboarding(); onComplete() }} disabled={!allDone || completing} className="w-full">
+          {completing ? "Сохраняем..." : allDone ? "Всё проверено — перейти в дашборд" : "Исправьте все ошибки чтобы продолжить"}
+        </Button>
+      </div>
 
-      <Button onClick={handleComplete} disabled={!allDone || completing} className="w-full max-w-xs">
-        {completing ? "Сохраняем..." : allDone ? "Готово — перейти в дашборд" : "Дождитесь завершения классификации..."}
-      </Button>
     </div>
   )
 }

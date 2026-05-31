@@ -2,19 +2,10 @@
 
 import { Loader2 } from "lucide-react"
 import { useGetFirstOrgQuery } from "@/entities/organization"
-import { useGetProductsQuery } from "@/entities/product"
-import { ProductsAttention } from "@/widgets/products-attention/ProductsAttention"
 import { ProductsTable } from "@/widgets/products-table/ProductsTable"
 
 export default function ProductsPage() {
   const { data: org, isLoading: orgLoading } = useGetFirstOrgQuery()
-
-  const clientId = org?.ozonClientId ?? 0
-
-  const { data: productsData, isLoading: productsLoading } = useGetProductsQuery(
-    { clientId, page: 1, limit: 100 },
-    { skip: !clientId }
-  )
 
   if (orgLoading) {
     return (
@@ -24,16 +15,15 @@ export default function ProductsPage() {
     )
   }
 
+  const clientId = org?.ozonClientId ?? 0
+
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold text-foreground">Товары</h1>
-
-      {!productsLoading && productsData && (
-        <ProductsAttention products={productsData.items} clientId={clientId} />
-      )}
-
+    <div className="flex flex-col gap-4 h-[calc(100vh-4rem)]">
+      <h1 className="text-xl font-semibold text-foreground shrink-0">Товары</h1>
       {clientId ? (
-        <ProductsTable clientId={clientId} />
+        <div className="flex-1 min-h-0">
+          <ProductsTable clientId={clientId} />
+        </div>
       ) : (
         <p className="text-sm text-muted-foreground">Организация не найдена</p>
       )}

@@ -65,7 +65,7 @@ export function ProductsAttention({ products, clientId }: Props) {
                 <div key={p.id} className="flex items-center gap-3 px-4 py-2.5 bg-yellow-50">
                   <span className="size-2 rounded-full bg-yellow-400 shrink-0" />
                   <span className="text-sm text-yellow-900 truncate flex-1">{p.name}</span>
-                  <span className="text-xs text-yellow-700 shrink-0">Требует проверки ТН ВЭД</span>
+                  <span className="text-xs text-yellow-700 shrink-0">ИИ классифицировал сам, требует проверки ТН ВЭД</span>
                 </div>
               ))}
               {countryIssue.map((p) => (

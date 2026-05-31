@@ -1,12 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useCallback } from "react"
 import { toast } from "sonner"
-import { CheckCircle2, Search } from "lucide-react"
-import {
-  Popover, PopoverContent, PopoverTrigger,
-  Button, Input,
-} from "@/shared/ui"
+import { Search } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger, Input } from "@/shared/ui"
 import { useUpdateTnvedMutation, type TnvedAlternative } from "@/entities/product"
 import { useLazySearchTnvedQuery } from "@/entities/tnved"
 import type { TnvedItem } from "@/entities/tnved"
@@ -21,16 +18,40 @@ type Props = {
   children: React.ReactNode
 }
 
+const LIMIT = 20
+
 export function TnvedReviewPopover({ productId, clientId, tnvedCode, tnvedName, alternatives, children }: Props) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
-  const [updateTnved, { isLoading: saving }] = useUpdateTnvedMutation()
-  const [searchTnved, { data: searchData, isFetching }] = useLazySearchTnvedQuery()
+  const [page, setPage] = useState(1)
+  const [allItems, setAllItems] = useState<TnvedItem[]>([])
+  const [hasMore, setHasMore] = useState(false)
+  const loadingMore = useRef(false)
 
-  const handleSearch = (q: string) => {
+  const [updateTnved, { isLoading: saving }] = useUpdateTnvedMutation()
+  const [searchTnved, { isFetching }] = useLazySearchTnvedQuery()
+
+  const doSearch = useCallback(async (q: string, pg: number, append = false) => {
+    if (q.length < 2) { setAllItems([]); setHasMore(false); return }
+    const result = await searchTnved({ q, page: pg, limit: LIMIT }).unwrap().catch(() => null)
+    if (!result) return
+    setAllItems(prev => append ? [...prev, ...result.items] : result.items)
+    setHasMore(result.items.length === LIMIT)
+  }, [searchTnved])
+
+  const handleQueryChange = (q: string) => {
     setQuery(q)
-    if (q.length >= 2) {
-      searchTnved({ q, limit: 20 })
+    setPage(1)
+    doSearch(q, 1, false)
+  }
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 60 && hasMore && !isFetching && !loadingMore.current) {
+      loadingMore.current = true
+      const nextPage = page + 1
+      setPage(nextPage)
+      doSearch(query, nextPage, true).finally(() => { loadingMore.current = false })
     }
   }
 
@@ -38,17 +59,8 @@ export function TnvedReviewPopover({ productId, clientId, tnvedCode, tnvedName, 
     const code = "code" in item ? item.code : item.tnvedCode
     const name = "name" in item ? item.name : item.tnvedName
     const unit = "unit" in item ? item.unit : item.tnvedUnit
-
     try {
-      await updateTnved({
-        productId,
-        clientId,
-        tnvedCode: code,
-        tnvedName: name ?? null,
-        tnvedUnit: unit ?? null,
-        tnvedStatus: "VERIFIED_BY_USER",
-        tnvedAlternatives: [],
-      }).unwrap()
+      await updateTnved({ productId, clientId, tnvedCode: code, tnvedName: name ?? null, tnvedUnit: unit ?? null, tnvedStatus: "VERIFIED_BY_USER", tnvedAlternatives: [] }).unwrap()
       toast.success("ТН ВЭД код подтверждён")
       setOpen(false)
     } catch {
@@ -56,79 +68,81 @@ export function TnvedReviewPopover({ productId, clientId, tnvedCode, tnvedName, 
     }
   }
 
-  const searchResults = query.length >= 2 ? (searchData?.items ?? []) : []
+  const handleOpen = (v: boolean) => {
+    setOpen(v)
+    if (!v) { setQuery(""); setAllItems([]); setPage(1); setHasMore(false) }
+  }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>{children}</PopoverTrigger>
+    <Popover open={open} onOpenChange={handleOpen}>
+      <PopoverTrigger>{children}</PopoverTrigger>
       <PopoverContent className="w-96 p-0" align="start">
-        <div className="p-3 border-b border-border">
-          <p className="text-xs font-medium text-muted-foreground mb-2">Текущий код</p>
-          <p className="text-sm font-mono">{tnvedCode} {tnvedName && `— ${tnvedName}`}</p>
-        </div>
 
+        {/* Текущий код */}
+        {tnvedCode && (
+          <div className="px-3 py-2 border-b border-border">
+            <p className="text-xs text-muted-foreground mb-0.5">Текущий</p>
+            <p className="text-xs font-mono font-medium">{tnvedCode}{tnvedName && ` — ${tnvedName}`}</p>
+          </div>
+        )}
+
+        {/* Варианты ИИ */}
         {alternatives.length > 0 && (
-          <div className="p-3 border-b border-border">
-            <p className="text-xs font-medium text-muted-foreground mb-2">Варианты от ИИ</p>
-            <div className="flex flex-col gap-1">
+          <div className="px-3 py-2 border-b border-border">
+            <p className="text-xs text-muted-foreground mb-1">Варианты ИИ</p>
+            <div className="flex flex-col gap-0.5">
               {alternatives.map((alt) => (
-                <button
-                  key={alt.id}
-                  onClick={() => handleSelect(alt)}
-                  disabled={saving}
-                  className={cn(
-                    "flex items-start gap-2 w-full text-left px-2 py-1.5 rounded-md text-xs hover:bg-accent transition-colors",
-                    saving && "opacity-50 cursor-not-allowed"
-                  )}
-                >
-                  <CheckCircle2 className="size-3.5 mt-0.5 text-muted-foreground shrink-0" />
-                  <span>
-                    <span className="font-mono font-medium">{alt.tnvedCode}</span>
-                    {alt.tnvedName && <span className="text-muted-foreground"> — {alt.tnvedName}</span>}
-                    {alt.tnvedUnit && <span className="text-muted-foreground"> ({alt.tnvedUnit})</span>}
-                  </span>
+                <button key={alt.id} onClick={() => handleSelect(alt)} disabled={saving}
+                  className="flex items-start gap-1.5 w-full text-left px-2 py-1 rounded text-xs hover:bg-accent transition-colors disabled:opacity-50">
+                  <span className="font-mono font-medium shrink-0">{alt.tnvedCode}</span>
+                  {alt.tnvedName && <span className="text-muted-foreground truncate">{alt.tnvedName}</span>}
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        <div className="p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Search className="size-3.5 text-muted-foreground shrink-0" />
+        {/* Поиск */}
+        <div className="px-3 py-2 border-b border-border">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
             <Input
               placeholder="Поиск по коду или названию..."
               value={query}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="h-7 text-xs"
+              onChange={(e) => handleQueryChange(e.target.value)}
+              className="h-7 pl-7 text-xs"
+              autoFocus
             />
           </div>
+        </div>
 
-          {isFetching && <p className="text-xs text-muted-foreground text-center py-2">Ищем...</p>}
-
-          {searchResults.length > 0 && (
-            <div className="flex flex-col gap-0.5 max-h-48 overflow-y-auto">
-              {searchResults.map((item) => (
-                <button
-                  key={item.code}
-                  onClick={() => handleSelect(item)}
-                  disabled={saving}
-                  className="flex items-start gap-2 w-full text-left px-2 py-1.5 rounded-md text-xs hover:bg-accent transition-colors"
-                >
-                  <span>
-                    <span className="font-mono font-medium">{item.code}</span>
-                    <span className="text-muted-foreground"> — {item.name}</span>
-                    {item.unit && <span className="text-muted-foreground"> ({item.unit})</span>}
-                  </span>
-                </button>
-              ))}
-            </div>
+        {/* Результаты */}
+        <div className="max-h-52 overflow-y-auto" onScroll={handleScroll}>
+          {isFetching && allItems.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-3">Ищем...</p>
           )}
-
-          {query.length >= 2 && !isFetching && searchResults.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-2">Ничего не найдено</p>
+          {query.length >= 2 && !isFetching && allItems.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-3">Ничего не найдено</p>
+          )}
+          {query.length < 2 && allItems.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-3">Введите минимум 2 символа</p>
+          )}
+          {allItems.map((item) => (
+            <button key={item.code} onClick={() => handleSelect(item)} disabled={saving}
+              className={cn(
+                "flex items-start gap-1.5 w-full text-left px-3 py-1.5 text-xs hover:bg-accent transition-colors border-b border-border/50 last:border-0",
+                saving && "opacity-50 cursor-not-allowed"
+              )}>
+              <span className="font-mono font-medium shrink-0">{item.code}</span>
+              <span className="text-muted-foreground">{item.name}</span>
+              {item.unit && <span className="text-muted-foreground shrink-0">({item.unit})</span>}
+            </button>
+          ))}
+          {isFetching && allItems.length > 0 && (
+            <p className="text-xs text-muted-foreground text-center py-2">Загрузка...</p>
           )}
         </div>
+
       </PopoverContent>
     </Popover>
   )

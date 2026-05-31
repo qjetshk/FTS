@@ -55,7 +55,7 @@ export function OnboardingWizard() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12 pb-24">
+    <div className={`flex min-h-screen flex-col items-center px-4 pb-24 ${step === 3 ? "justify-start pt-4" : "justify-center py-12"}`}>
 
       <AnimatePresence mode="wait">
         <motion.div
