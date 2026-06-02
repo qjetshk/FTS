@@ -11,7 +11,14 @@ import { CountrySelect } from "@/features/edit-product-country/ui/CountrySelect"
 import { TnvedReviewPopover } from "@/features/edit-tnved/ui/TnvedReviewPopover"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
-type Props = { clientId: number; className?: string }
+export type PendingTnved = { tnvedCode: string; tnvedName: string | null; tnvedUnit: string | null }
+
+type Props = {
+  clientId: number
+  className?: string
+  pendingTnvedMap: Record<number, PendingTnved>
+  onTnvedSelect: (productId: number, code: string, name: string | null, unit: string | null) => void
+}
 
 const HEADS = ["", "Название", "Категория", "Страна-изготовитель", "Артикул", "SKU", "ТН ВЭД", "Ед."]
 const DEFAULT_SIZES = [4, 18, 13, 13, 11, 7, 28, 6]
@@ -32,13 +39,19 @@ function TCell({ value, mono, bold, muted }: { value?: string | null; mono?: boo
   )
 }
 
-function Row({ product, clientId, gridCols, variant }: {
+function Row({ product, clientId, gridCols, variant, pending, onTnvedSelect }: {
   product: Product; clientId: number; gridCols: string; variant: "attention" | "main"
+  pending?: PendingTnved
+  onTnvedSelect: (productId: number, code: string, name: string | null, unit: string | null) => void
 }) {
   const countryIssue = product.countryConflict || !product.country
   const showTnvedPopup = !!product.tnvedStatus && product.tnvedStatus !== "VERIFIED_BY_USER"
-  const tnvedBold = product.tnvedStatus === "CLASSIFIED"
-  const tnvedLabel = product.tnvedCode ? `${product.tnvedCode} — ${product.tnvedName ?? "?"}` : "Нет кода — выбрать"
+
+  const effectiveCode = pending?.tnvedCode ?? product.tnvedCode
+  const effectiveName = pending ? pending.tnvedName : product.tnvedName
+  const tnvedBold = !pending && product.tnvedStatus === "CLASSIFIED"
+  const tnvedLabel = effectiveCode ? `${effectiveCode} — ${effectiveName ?? "?"}` : "Нет кода — выбрать"
+
   const rowCls = variant === "attention" ? "bg-red-50 hover:bg-red-100"
     : product.tnvedStatus === "VERIFIED_BY_LLM" ? "bg-green-50 hover:bg-green-100"
     : product.tnvedStatus === "CLASSIFIED" ? "bg-yellow-50 hover:bg-yellow-100"
@@ -80,26 +93,51 @@ function Row({ product, clientId, gridCols, variant }: {
       <div className="flex items-center p-2 overflow-hidden"><span className="text-xs font-mono text-muted-foreground truncate">{product.sku}</span></div>
       <div className="flex items-center p-2 overflow-hidden">
         {showTnvedPopup ? (
-          <TnvedReviewPopover productId={product.productId} clientId={clientId} tnvedCode={product.tnvedCode} tnvedName={product.tnvedName} alternatives={product.tnvedAlternatives}>
-            <button type="button" className={cn("text-xs hover:underline text-left truncate block w-full", product.tnvedStatus === "NEEDS_REVIEW" && "text-red-700", tnvedBold && "font-semibold")}>
-              {tnvedLabel}
-            </button>
-          </TnvedReviewPopover>
+          <TooltipProvider>
+            <Tooltip>
+              <TnvedReviewPopover
+                tnvedCode={product.tnvedCode}
+                tnvedName={product.tnvedName}
+                tnvedUnit={product.tnvedUnit}
+                alternatives={product.tnvedAlternatives}
+                pendingCode={pending?.tnvedCode}
+                pendingName={pending?.tnvedName}
+                onSelect={(code, name, unit) => onTnvedSelect(product.productId, code, name, unit)}
+              >
+                <TooltipTrigger
+                  render={<button type="button" />}
+                  className={cn(
+                    "text-xs hover:underline text-left truncate block w-full",
+                    pending ? "text-blue-600 font-medium" : product.tnvedStatus === "NEEDS_REVIEW" ? "text-red-700" : "",
+                    tnvedBold && "font-semibold"
+                  )}
+                >
+                  {pending && <span className="inline-block size-1.5 rounded-full bg-blue-500 mr-1 mb-0.5 shrink-0" />}
+                  {tnvedLabel}
+                </TooltipTrigger>
+              </TnvedReviewPopover>
+              <TooltipContent side="bottom" className="max-w-sm text-xs whitespace-normal">
+                {effectiveCode}{effectiveName && ` — ${effectiveName}`}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         ) : (
-          <TCell value={product.tnvedCode ? `${product.tnvedCode}${product.tnvedName ? ` — ${product.tnvedName}` : ""}` : null} bold={tnvedBold} />
+          <TCell value={effectiveCode ? `${effectiveCode}${effectiveName ? ` — ${effectiveName}` : ""}` : null} bold={tnvedBold} />
         )}
       </div>
-      <div className="flex items-center p-2 overflow-hidden"><span className="text-xs text-muted-foreground">{product.tnvedUnit ?? "—"}</span></div>
+      <div className="flex items-center p-2 overflow-hidden">
+        <span className="text-xs text-muted-foreground">{pending?.tnvedUnit ?? product.tnvedUnit ?? "—"}</span>
+      </div>
     </div>
   )
 }
 
-// ─── Self-contained table block with own resize state ─────────────────────────
-
-function TableBlock({ items, clientId, isLoading, variant, label, maxHeight, flex }: {
+function TableBlock({ items, clientId, isLoading, variant, label, maxHeight, flex, pendingTnvedMap, onTnvedSelect }: {
   items: Product[]; clientId: number
   isLoading?: boolean; variant: "attention" | "main"
   label?: string; maxHeight?: number; flex?: boolean
+  pendingTnvedMap: Record<number, PendingTnved>
+  onTnvedSelect: (productId: number, code: string, name: string | null, unit: string | null) => void
 }) {
   const [sizes, setSizes] = useState(DEFAULT_SIZES)
   const gridCols = sizes.map(s => `${s}fr`).join(" ")
@@ -125,7 +163,6 @@ function TableBlock({ items, clientId, isLoading, variant, label, maxHeight, fle
         style={maxHeight ? { maxHeight } : flex ? { flex: 1, minHeight: 0 } : undefined}
       >
         <div className="min-w-175">
-          {/* Sticky header with own Group */}
           <div className={cn("sticky top-0 z-10 border-b", headBg, borderCls)}>
             <Group orientation="horizontal" onLayoutChange={handleLayoutChange} style={{ display: "flex", height: 36 }}>
               {HEADS.flatMap((h, i) => {
@@ -144,15 +181,23 @@ function TableBlock({ items, clientId, isLoading, variant, label, maxHeight, fle
               })}
             </Group>
           </div>
-
-          {/* Body */}
           {isLoading
             ? Array.from({ length: 3 }).map((_, i) => (
                 <div key={`skeleton-row-${i}`} className="grid border-b border-border/50" style={{ gridTemplateColumns: gridCols }}>
                   {HEADS.map((_, j) => <div key={`skeleton-col-${j}`} className="p-2"><Skeleton className="h-4 w-full" /></div>)}
                 </div>
               ))
-            : items.map(p => <Row key={p.id} product={p} clientId={clientId} gridCols={gridCols} variant={variant} />)
+            : items.map(p => (
+                <Row
+                  key={p.id}
+                  product={p}
+                  clientId={clientId}
+                  gridCols={gridCols}
+                  variant={variant}
+                  pending={pendingTnvedMap[p.productId]}
+                  onTnvedSelect={onTnvedSelect}
+                />
+              ))
           }
         </div>
       </div>
@@ -160,9 +205,7 @@ function TableBlock({ items, clientId, isLoading, variant, label, maxHeight, fle
   )
 }
 
-// ─── Main export ──────────────────────────────────────────────────────────────
-
-export function ProductsTable({ clientId, className }: Props) {
+export function ProductsTable({ clientId, className, pendingTnvedMap, onTnvedSelect }: Props) {
   const [mainPage, setMainPage] = useState(1)
 
   const { data, isLoading } = useGetProductsQuery({ clientId, page: 1, limit: 100 })
@@ -175,7 +218,6 @@ export function ProductsTable({ clientId, className }: Props) {
   const pageItems = goodItems.slice((mainPage - 1) * MAIN_LIMIT, mainPage * MAIN_LIMIT)
   const nullCount = snapshot.filter(p => p.tnvedStatus === null).length
   const hasBad = isLoading || badItems.length > 0
-
   const attentionMaxH = isLoading ? 150 : Math.min(badItems.length * 42 + 40, 250)
 
   return (
@@ -195,6 +237,8 @@ export function ProductsTable({ clientId, className }: Props) {
           variant="attention"
           label={isLoading ? undefined : `Требует внимания — ${badItems.length}`}
           maxHeight={attentionMaxH}
+          pendingTnvedMap={pendingTnvedMap}
+          onTnvedSelect={onTnvedSelect}
         />
       )}
 
@@ -205,6 +249,8 @@ export function ProductsTable({ clientId, className }: Props) {
         variant="main"
         label={(!isLoading && hasBad && goodItems.length > 0) ? `Товары — ${goodItems.length}` : undefined}
         flex
+        pendingTnvedMap={pendingTnvedMap}
+        onTnvedSelect={onTnvedSelect}
       />
 
       {totalGoodPages > 1 && (

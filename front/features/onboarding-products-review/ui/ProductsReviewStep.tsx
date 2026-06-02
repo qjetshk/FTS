@@ -1,9 +1,11 @@
 "use client"
 
+import { useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@/shared/ui"
-import { useGetProductsSnapshotQuery, isNeedsAttention } from "@/entities/product"
+import { useGetProductsSnapshotQuery, useUpdateTnvedMutation, isNeedsAttention } from "@/entities/product"
 import { useCompleteOnboardingMutation } from "@/entities/user"
-import { ProductsTable } from "@/widgets/products-table/ProductsTable"
+import { ProductsTable, type PendingTnved } from "@/widgets/products-table/ProductsTable"
 
 type Props = {
   clientId: number
@@ -11,18 +13,67 @@ type Props = {
 }
 
 export function ProductsReviewStep({ clientId, onComplete }: Props) {
+  const [pendingTnved, setPendingTnved] = useState<Record<number, PendingTnved>>({})
+  const [isSaving, setIsSaving] = useState(false)
+
   const { data: snapshot = [] } = useGetProductsSnapshotQuery(clientId, {
     pollingInterval: 5000,
     skip: !clientId,
   })
   const [completeOnboarding, { isLoading: completing }] = useCompleteOnboardingMutation()
+  const [updateTnved] = useUpdateTnvedMutation()
 
   const total = snapshot.length
   const classified = snapshot.filter(p => p.tnvedStatus !== null).length
-  const needsAttention = snapshot.filter(p =>
-    isNeedsAttention({ tnvedStatus: p.tnvedStatus, countryConflict: p.countryConflict, country: p.country })
-  ).length
-  const allDone = total > 0 && classified === total && needsAttention === 0
+  const pendingCount = Object.keys(pendingTnved).length
+
+  // A product is effectively resolved if it has a pending selection (tnved only) or no issues from server
+  const effectiveNeedsAttention = snapshot.filter(p => {
+    const tnvedOk = !!pendingTnved[p.productId] || p.tnvedStatus !== "NEEDS_REVIEW"
+    const countryOk = !p.countryConflict && !!p.country
+    return !tnvedOk || !countryOk
+  }).length
+
+  const canProceed = total > 0 && classified === total && effectiveNeedsAttention === 0
+
+  const handleTnvedSelect = (productId: number, code: string, name: string | null, unit: string | null) => {
+    setPendingTnved(prev => ({ ...prev, [productId]: { tnvedCode: code, tnvedName: name, tnvedUnit: unit } }))
+  }
+
+  const handleContinue = async () => {
+    setIsSaving(true)
+    try {
+      if (pendingCount > 0) {
+        await Promise.all(
+          Object.entries(pendingTnved).map(([productId, p]) =>
+            updateTnved({
+              productId: Number(productId),
+              clientId,
+              tnvedCode: p.tnvedCode,
+              tnvedName: p.tnvedName,
+              tnvedUnit: p.tnvedUnit,
+              tnvedStatus: "VERIFIED_BY_USER",
+              tnvedAlternatives: [],
+            }).unwrap()
+          )
+        )
+        setPendingTnved({})
+      }
+      await completeOnboarding()
+      onComplete()
+    } catch {
+      toast.error("Не удалось сохранить изменения")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const buttonLabel = () => {
+    if (isSaving || completing) return "Сохраняем..."
+    if (!canProceed) return "Исправьте все ошибки чтобы продолжить"
+    if (pendingCount > 0) return "Сохранить и перейти в дашборд"
+    return "Всё проверено — перейти в дашборд"
+  }
 
   return (
     <div className="w-full h-[calc(100vh-7rem)] flex flex-col gap-3">
@@ -43,12 +94,20 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
       </div>
 
       <div className="flex-1 min-h-0">
-        <ProductsTable clientId={clientId} />
+        <ProductsTable
+          clientId={clientId}
+          pendingTnvedMap={pendingTnved}
+          onTnvedSelect={handleTnvedSelect}
+        />
       </div>
 
       <div className="shrink-0">
-        <Button onClick={async () => { await completeOnboarding(); onComplete() }} disabled={!allDone || completing} className="w-full">
-          {completing ? "Сохраняем..." : allDone ? "Всё проверено — перейти в дашборд" : "Исправьте все ошибки чтобы продолжить"}
+        <Button
+          onClick={handleContinue}
+          disabled={!canProceed || isSaving || completing}
+          className="w-full"
+        >
+          {buttonLabel()}
         </Button>
       </div>
 
