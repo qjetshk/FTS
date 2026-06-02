@@ -1,12 +1,12 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { m } from "framer-motion"
 
 export function AuthVisual() {
   return (
     <div className="relative h-full w-full overflow-hidden bg-[oklch(0.96_0.018_150)]">
       {/* Blob 1 — large, top-right */}
-      <motion.div
+      <m.div
         className="absolute -top-1/2 right-0 size-full rounded-full bg-[oklch(0.80_0.11_145)] blur-[90px]"
         animate={{
           x: [0, 60, -40, 20, 0],
@@ -17,7 +17,7 @@ export function AuthVisual() {
       />
 
       {/* Blob 2 — medium, bottom-left */}
-      <motion.div
+      <m.div
         className="absolute -bottom-1/2 -left-1/4 size-4/5 rounded-full bg-[oklch(0.84_0.09_155)] blur-[70px]"
         animate={{
           x: [0, -50, 60, -20, 0],
@@ -28,7 +28,7 @@ export function AuthVisual() {
       />
 
       {/* Blob 3 — small, center-right */}
-      <motion.div
+      <m.div
         className="absolute top-1/4 right-1/4 size-1/2 rounded-full bg-[oklch(0.89_0.07_148)] opacity-80 blur-[60px]"
         animate={{
           x: [0, 70, -30, 50, 0],

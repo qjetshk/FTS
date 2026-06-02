@@ -1,7 +1,13 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { RegisterForm } from "@/features/auth-register"
 import { ROUTES } from "@/shared/config"
+
+export const metadata: Metadata = {
+  title: "Регистрация — easyfts",
+  description: "Создайте аккаунт для работы с таможенной отчётностью OZON",
+}
 
 export default function RegisterPage() {
   return (

@@ -39,13 +39,13 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
       if (refreshResult.data) {
         const data = refreshResult.data as { accessToken: string; user: unknown }
         localStorage.setItem("access_token", data.accessToken)
-        if (data.user) localStorage.setItem("user", JSON.stringify(data.user))
+        if (data.user) localStorage.setItem("user:v1", JSON.stringify(data.user))
         result = await rawBaseQuery(args, api, extraOptions)
       } else {
         const status = (refreshResult.error as FetchBaseQueryError | undefined)?.status
         if (status === 401 || status === 403) {
           localStorage.removeItem("access_token")
-          localStorage.removeItem("user")
+          localStorage.removeItem("user:v1")
           if (typeof window !== "undefined") window.location.href = "/login"
         }
         // network / 5xx — don't log out, just return original error

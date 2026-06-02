@@ -10,7 +10,7 @@ export function useUser(): UseUserReturn {
   const [user, setUser] = useState<User | null>(() => {
     if (typeof window === "undefined") return null
     try {
-      const raw = localStorage.getItem("user")
+      const raw = localStorage.getItem("user:v1")
       return raw ? (JSON.parse(raw) as User) : null
     } catch {
       return null
@@ -19,7 +19,7 @@ export function useUser(): UseUserReturn {
 
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === "user") {
+      if (e.key === "user:v1") {
         try {
           setUser(e.newValue ? (JSON.parse(e.newValue) as User) : null)
         } catch {

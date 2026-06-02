@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, m } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { ROUTES } from "@/shared/config"
@@ -44,6 +44,7 @@ export function OnboardingWizard() {
       classify({ clientId: String(existingOrg.ozonClientId) })
       setStep(3)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgLoading, existingOrg])
 
   if (orgLoading) {
@@ -58,7 +59,7 @@ export function OnboardingWizard() {
     <div className={`flex min-h-screen flex-col items-center px-4 pb-24 ${step === 3 ? "justify-start pt-4" : "justify-center py-12"}`}>
 
       <AnimatePresence mode="wait">
-        <motion.div
+        <m.div
           key={step}
           variants={variants}
           initial="enter"
@@ -88,7 +89,7 @@ export function OnboardingWizard() {
               onComplete={() => router.push(ROUTES.statforms)}
             />
           )}
-        </motion.div>
+        </m.div>
       </AnimatePresence>
 
       <div className="fixed bottom-0 left-0 right-0 flex justify-center py-5 bg-background">

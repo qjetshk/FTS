@@ -48,7 +48,11 @@ function SidebarProvider({
   children,
   ...props
 }: SidebarProviderProps) {
-  const [isMobile, setIsMobile] = React.useState(false)
+  const [isMobile, setIsMobile] = React.useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`).matches
+      : false
+  )
   const [openMobile, setOpenMobile] = React.useState(false)
   const [_open, _setOpen] = React.useState(defaultOpen)
 
@@ -89,14 +93,18 @@ function SidebarProvider({
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
     const onChange = () => setIsMobile(mql.matches)
     mql.addEventListener("change", onChange)
-    setIsMobile(mql.matches)
     return () => mql.removeEventListener("change", onChange)
   }, [])
 
   const state: SidebarState = isMobile ? "expanded" : open ? "expanded" : "collapsed"
 
+  const contextValue = React.useMemo(
+    () => ({ state, open, setOpen, openMobile, setOpenMobile, isMobile, toggleSidebar }),
+    [state, open, setOpen, openMobile, setOpenMobile, isMobile, toggleSidebar]
+  )
+
   return (
-    <SidebarContext.Provider value={{ state, open, setOpen, openMobile, setOpenMobile, isMobile, toggleSidebar }}>
+    <SidebarContext.Provider value={contextValue}>
       <div
         data-sidebar-state={state}
         className={cn("group/sidebar-wrapper flex min-h-svh w-full", className)}
@@ -180,6 +188,7 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<"
   const { toggleSidebar } = useSidebar()
   return (
     <button
+      type="button"
       data-sidebar="trigger"
       aria-label="Toggle sidebar"
       onClick={(e) => { onClick?.(e); toggleSidebar() }}
@@ -201,6 +210,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
   const { toggleSidebar } = useSidebar()
   return (
     <button
+      type="button"
       data-sidebar="rail"
       aria-label="Toggle sidebar"
       tabIndex={-1}
@@ -269,6 +279,7 @@ function SidebarGroupLabel({ className, ...props }: React.ComponentProps<"div">)
 function SidebarGroupAction({ className, ...props }: React.ComponentProps<"button">) {
   return (
     <button
+      type="button"
       data-sidebar="group-action"
       className={cn(
         "absolute right-3 top-3.5 flex aspect-square w-5 items-center justify-center rounded-md p-0",
@@ -303,7 +314,7 @@ type SidebarMenuButtonProps = {
   asChild?: boolean
 } & Omit<React.ComponentProps<"button">, "children">
 
-function SidebarMenuButton({ isActive = false, size = "default", tooltip, className, children, asChild = false, ...props }: SidebarMenuButtonProps) {
+function SidebarMenuButton({ isActive = false, size = "default", tooltip, className, children, asChild = false, type = "button", ...props }: SidebarMenuButtonProps) {
   const { state } = useSidebar()
   const collapsed = state === "collapsed"
 
@@ -349,7 +360,7 @@ function SidebarMenuButton({ isActive = false, size = "default", tooltip, classN
   }
 
   return (
-    <button {...dataAttrs} className={buttonClass} {...props}>
+    <button {...dataAttrs} type={type} className={buttonClass} {...props}>
       {children}
     </button>
   )
@@ -358,6 +369,7 @@ function SidebarMenuButton({ isActive = false, size = "default", tooltip, classN
 function SidebarMenuAction({ className, showOnHover = false, ...props }: React.ComponentProps<"button"> & { showOnHover?: boolean }) {
   return (
     <button
+      type="button"
       data-sidebar="menu-action"
       className={cn(
         "absolute right-1 top-1.5 flex aspect-square w-5 items-center justify-center rounded-md p-0",
@@ -432,7 +444,7 @@ function SidebarMenuSubButton({
   }
 
   return (
-    <button data-sidebar="menu-sub-button" data-active={isActive} className={buttonClass} {...props}>
+    <button type="button" data-sidebar="menu-sub-button" data-active={isActive} className={buttonClass} {...props}>
       {children}
     </button>
   )

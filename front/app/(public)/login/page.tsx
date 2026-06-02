@@ -1,7 +1,13 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { LoginForm } from "@/features/auth-login"
 import { ROUTES } from "@/shared/config"
+
+export const metadata: Metadata = {
+  title: "Вход — easyfts",
+  description: "Войдите в аккаунт для работы с таможенной отчётностью OZON",
+}
 
 export default function LoginPage() {
   return (

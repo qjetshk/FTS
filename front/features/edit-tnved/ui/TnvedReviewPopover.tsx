@@ -23,7 +23,7 @@ const LIMIT = 20
 export function TnvedReviewPopover({ productId, clientId, tnvedCode, tnvedName, alternatives, children }: Props) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
-  const [page, setPage] = useState(1)
+  const pageRef = useRef(1)
   const [allItems, setAllItems] = useState<TnvedItem[]>([])
   const [hasMore, setHasMore] = useState(false)
   const loadingMore = useRef(false)
@@ -41,7 +41,7 @@ export function TnvedReviewPopover({ productId, clientId, tnvedCode, tnvedName, 
 
   const handleQueryChange = (q: string) => {
     setQuery(q)
-    setPage(1)
+    pageRef.current = 1
     doSearch(q, 1, false)
   }
 
@@ -49,8 +49,8 @@ export function TnvedReviewPopover({ productId, clientId, tnvedCode, tnvedName, 
     const el = e.currentTarget
     if (el.scrollHeight - el.scrollTop - el.clientHeight < 60 && hasMore && !isFetching && !loadingMore.current) {
       loadingMore.current = true
-      const nextPage = page + 1
-      setPage(nextPage)
+      const nextPage = pageRef.current + 1
+      pageRef.current = nextPage
       doSearch(query, nextPage, true).finally(() => { loadingMore.current = false })
     }
   }
@@ -70,7 +70,7 @@ export function TnvedReviewPopover({ productId, clientId, tnvedCode, tnvedName, 
 
   const handleOpen = (v: boolean) => {
     setOpen(v)
-    if (!v) { setQuery(""); setAllItems([]); setPage(1); setHasMore(false) }
+    if (!v) { setQuery(""); setAllItems([]); pageRef.current = 1; setHasMore(false) }
   }
 
   return (
@@ -92,7 +92,7 @@ export function TnvedReviewPopover({ productId, clientId, tnvedCode, tnvedName, 
             <p className="text-xs text-muted-foreground mb-1">Варианты ИИ</p>
             <div className="flex flex-col gap-0.5">
               {alternatives.map((alt) => (
-                <button key={alt.id} onClick={() => handleSelect(alt)} disabled={saving}
+                <button type="button" key={alt.id} onClick={() => handleSelect(alt)} disabled={saving}
                   className="flex items-start gap-1.5 w-full text-left px-2 py-1 rounded text-xs hover:bg-accent transition-colors disabled:opacity-50">
                   <span className="font-mono font-medium shrink-0">{alt.tnvedCode}</span>
                   {alt.tnvedName && <span className="text-muted-foreground truncate">{alt.tnvedName}</span>}
@@ -128,7 +128,7 @@ export function TnvedReviewPopover({ productId, clientId, tnvedCode, tnvedName, 
             <p className="text-xs text-muted-foreground text-center py-3">Введите минимум 2 символа</p>
           )}
           {allItems.map((item) => (
-            <button key={item.code} onClick={() => handleSelect(item)} disabled={saving}
+            <button type="button" key={item.code} onClick={() => handleSelect(item)} disabled={saving}
               className={cn(
                 "flex items-start gap-1.5 w-full text-left px-3 py-1.5 text-xs hover:bg-accent transition-colors border-b border-border/50 last:border-0",
                 saving && "opacity-50 cursor-not-allowed"

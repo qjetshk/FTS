@@ -23,10 +23,8 @@ function TCell({ value, mono, bold, muted }: { value?: string | null; mono?: boo
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger asChild>
-          <span className={cn("text-xs truncate block cursor-default w-full", mono && "font-mono", bold && "font-semibold", muted && "text-muted-foreground")}>
-            {value}
-          </span>
+        <TooltipTrigger render={<span />} className={cn("text-xs truncate block cursor-default w-full", mono && "font-mono", bold && "font-semibold", muted && "text-muted-foreground")}>
+          {value}
         </TooltipTrigger>
         <TooltipContent side="bottom" className="max-w-sm text-xs whitespace-normal">{value}</TooltipContent>
       </Tooltip>
@@ -52,10 +50,12 @@ function Row({ product, clientId, gridCols, variant }: {
         {product.primaryImg ? (
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger asChild>
+              <TooltipTrigger render={<span />}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={product.primaryImg} alt="" className="size-8 object-cover rounded shrink-0 cursor-zoom-in" />
               </TooltipTrigger>
               <TooltipContent side="right" className="p-1 bg-background border shadow-lg">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={product.primaryImg} alt="" className="size-40 object-contain rounded" />
               </TooltipContent>
             </Tooltip>
@@ -64,24 +64,24 @@ function Row({ product, clientId, gridCols, variant }: {
           <div className="size-8 rounded bg-muted shrink-0" />
         )}
       </div>
-      <div className="flex items-center py-2 px-2 overflow-hidden"><TCell value={product.name} /></div>
-      <div className="flex items-center py-2 px-2 overflow-hidden">
+      <div className="flex items-center p-2 overflow-hidden"><TCell value={product.name} /></div>
+      <div className="flex items-center p-2 overflow-hidden">
         <TooltipProvider><Tooltip>
-          <TooltipTrigger asChild><span className="text-xs truncate block cursor-default w-full">{product.category}</span></TooltipTrigger>
+          <TooltipTrigger render={<span />} className="text-xs truncate block cursor-default w-full">{product.category}</TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-sm text-xs whitespace-normal">{product.categoryPath}</TooltipContent>
         </Tooltip></TooltipProvider>
       </div>
-      <div className="flex items-center py-2 px-2 overflow-hidden">
+      <div className="flex items-center p-2 overflow-hidden">
         {countryIssue
           ? <CountrySelect productId={product.productId} clientId={clientId} countriesOfOrigin={product.countriesOfOrigin} currentCountry={product.country} />
           : <span className="text-xs truncate">{product.country}</span>}
       </div>
-      <div className="flex items-center py-2 px-2 overflow-hidden font-mono text-muted-foreground text-xs">{product.offerId}</div>
-      <div className="flex items-center py-2 px-2 overflow-hidden"><span className="text-xs font-mono text-muted-foreground truncate">{product.sku}</span></div>
-      <div className="flex items-center py-2 px-2 overflow-hidden">
+      <div className="flex items-center p-2 overflow-hidden font-mono text-muted-foreground text-xs">{product.offerId}</div>
+      <div className="flex items-center p-2 overflow-hidden"><span className="text-xs font-mono text-muted-foreground truncate">{product.sku}</span></div>
+      <div className="flex items-center p-2 overflow-hidden">
         {showTnvedPopup ? (
           <TnvedReviewPopover productId={product.productId} clientId={clientId} tnvedCode={product.tnvedCode} tnvedName={product.tnvedName} alternatives={product.tnvedAlternatives}>
-            <button className={cn("text-xs hover:underline text-left truncate block w-full", product.tnvedStatus === "NEEDS_REVIEW" && "text-red-700", tnvedBold && "font-semibold")}>
+            <button type="button" className={cn("text-xs hover:underline text-left truncate block w-full", product.tnvedStatus === "NEEDS_REVIEW" && "text-red-700", tnvedBold && "font-semibold")}>
               {tnvedLabel}
             </button>
           </TnvedReviewPopover>
@@ -89,7 +89,7 @@ function Row({ product, clientId, gridCols, variant }: {
           <TCell value={product.tnvedCode ? `${product.tnvedCode}${product.tnvedName ? ` — ${product.tnvedName}` : ""}` : null} bold={tnvedBold} />
         )}
       </div>
-      <div className="flex items-center py-2 px-2 overflow-hidden"><span className="text-xs text-muted-foreground">{product.tnvedUnit ?? "—"}</span></div>
+      <div className="flex items-center p-2 overflow-hidden"><span className="text-xs text-muted-foreground">{product.tnvedUnit ?? "—"}</span></div>
     </div>
   )
 }
@@ -131,11 +131,11 @@ function TableBlock({ items, clientId, isLoading, variant, label, maxHeight, fle
               {HEADS.flatMap((h, i) => {
                 const nodes: React.ReactNode[] = []
                 if (i > 0) nodes.push(
-                  <Separator key={`sep-${i}`}
+                  <Separator key={`sep-${HEADS[i] || "img"}`}
                     className="w-1 cursor-col-resize bg-border/60 hover:bg-primary active:bg-primary transition-colors shrink-0" />
                 )
                 nodes.push(
-                  <Panel key={`p-${i}`} id={`col-${i}`} defaultSize={DEFAULT_SIZES[i]} minSize={MIN_SIZES[i]}
+                  <Panel key={`panel-${HEADS[i] || "img"}`} id={`col-${i}`} defaultSize={DEFAULT_SIZES[i]} minSize={MIN_SIZES[i]}
                     className="flex items-center px-2 overflow-hidden">
                     <span className={cn("text-xs font-medium truncate select-none", headText)}>{h}</span>
                   </Panel>
@@ -148,8 +148,8 @@ function TableBlock({ items, clientId, isLoading, variant, label, maxHeight, fle
           {/* Body */}
           {isLoading
             ? Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="grid border-b border-border/50" style={{ gridTemplateColumns: gridCols }}>
-                  {HEADS.map((_, j) => <div key={j} className="py-2 px-2"><Skeleton className="h-4 w-full" /></div>)}
+                <div key={`skeleton-row-${i}`} className="grid border-b border-border/50" style={{ gridTemplateColumns: gridCols }}>
+                  {HEADS.map((_, j) => <div key={`skeleton-col-${j}`} className="p-2"><Skeleton className="h-4 w-full" /></div>)}
                 </div>
               ))
             : items.map(p => <Row key={p.id} product={p} clientId={clientId} gridCols={gridCols} variant={variant} />)
@@ -211,9 +211,9 @@ export function ProductsTable({ clientId, className }: Props) {
         <div className="flex items-center justify-between text-xs text-muted-foreground shrink-0">
           <span>{goodItems.length} товаров</span>
           <div className="flex items-center gap-1.5">
-            <button onClick={() => setMainPage(p => Math.max(1, p - 1))} disabled={mainPage === 1} className="p-1 rounded hover:bg-accent disabled:opacity-40"><ChevronLeft className="size-3.5" /></button>
+            <button type="button" onClick={() => setMainPage(p => Math.max(1, p - 1))} disabled={mainPage === 1} className="p-1 rounded hover:bg-accent disabled:opacity-40"><ChevronLeft className="size-3.5" /></button>
             <span>{mainPage} / {totalGoodPages}</span>
-            <button onClick={() => setMainPage(p => Math.min(totalGoodPages, p + 1))} disabled={mainPage === totalGoodPages} className="p-1 rounded hover:bg-accent disabled:opacity-40"><ChevronRight className="size-3.5" /></button>
+            <button type="button" onClick={() => setMainPage(p => Math.min(totalGoodPages, p + 1))} disabled={mainPage === totalGoodPages} className="p-1 rounded hover:bg-accent disabled:opacity-40"><ChevronRight className="size-3.5" /></button>
           </div>
         </div>
       )}

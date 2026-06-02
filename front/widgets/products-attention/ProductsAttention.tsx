@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { m, AnimatePresence } from "framer-motion"
 import { ChevronDown } from "lucide-react"
 import { cn } from "@/shared/lib"
 import type { Product } from "@/entities/product"
@@ -23,6 +23,7 @@ export function ProductsAttention({ products, clientId }: Props) {
   return (
     <div className="rounded-xl border border-border overflow-hidden">
       <button
+        type="button"
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-4 py-3 bg-surface hover:bg-surface-2 transition-colors"
       >
@@ -46,14 +47,14 @@ export function ProductsAttention({ products, clientId }: Props) {
             )}
           </div>
         </div>
-        <motion.div animate={{ rotate: open ? 0 : -90 }} transition={{ duration: 0.2 }}>
+        <m.div animate={{ rotate: open ? 0 : -90 }} transition={{ duration: 0.2 }}>
           <ChevronDown className="size-4 text-muted-foreground" />
-        </motion.div>
+        </m.div>
       </button>
 
       <AnimatePresence initial={false}>
         {open && (
-          <motion.div
+          <m.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -78,7 +79,7 @@ export function ProductsAttention({ products, clientId }: Props) {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

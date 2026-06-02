@@ -1,6 +1,6 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { m } from "framer-motion"
 import { cn } from "@/shared/lib"
 
 const STEPS = [
@@ -19,7 +19,7 @@ export function Stepper({ current }: { current: number }) {
         return (
           <div key={step.n} className="flex items-center">
             <div className="flex flex-col items-center gap-1.5">
-              <motion.div
+              <m.div
                 animate={{
                   backgroundColor: done || active ? "var(--primary)" : "var(--border)",
                   scale: active ? 1.1 : 1,
@@ -34,14 +34,14 @@ export function Stepper({ current }: { current: number }) {
                 ) : (
                   step.n
                 )}
-              </motion.div>
+              </m.div>
               <span className={cn("text-xs whitespace-nowrap", active ? "text-foreground font-medium" : "text-muted-foreground")}>
                 {step.label}
               </span>
             </div>
 
             {i < STEPS.length - 1 && (
-              <motion.div
+              <m.div
                 animate={{ backgroundColor: done ? "var(--primary)" : "var(--border)" }}
                 transition={{ duration: 0.25 }}
                 className="h-px w-16 mb-5 mx-2"

@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, m } from "framer-motion"
 import {
   ChevronRight,
   ChevronsUpDown,
@@ -170,7 +170,7 @@ function UserFooter() {
       await logout().unwrap()
     } catch {}
     localStorage.removeItem("access_token")
-    localStorage.removeItem("user")
+    localStorage.removeItem("user:v1")
     router.replace(ROUTES.login)
   }
 
@@ -178,12 +178,13 @@ function UserFooter() {
     <div ref={wrapperRef} className="relative">
       <AnimatePresence>
         {menuOpen && (
-        <motion.div
+        <m.div
           initial={{ opacity: 0, scale: 0.96, y: 6 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 6 }}
           transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
           className="absolute bottom-full left-0 w-52 mb-2 rounded-xl border border-border bg-popover shadow-lg z-50 overflow-hidden py-1">
+
           <div className="px-3 py-2 border-b border-border mb-1">
             <p className="text-xs font-medium truncate">{user?.name}</p>
             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
@@ -217,13 +218,14 @@ function UserFooter() {
           <div className="my-1 h-px bg-border mx-2" />
 
           <button
+            type="button"
             onClick={handleLogout}
             className={cn(MENU_ITEM_CLASS, "text-destructive hover:text-destructive")}
           >
             <LogOut strokeWidth={1.5} className="size-4 shrink-0" />
             Выйти
           </button>
-        </motion.div>
+        </m.div>
         )}
       </AnimatePresence>
 

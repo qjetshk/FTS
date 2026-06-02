@@ -35,7 +35,7 @@ export function LoginForm() {
     try {
       const result = await login(values).unwrap()
       localStorage.setItem("access_token", result.accessToken)
-      localStorage.setItem("user", JSON.stringify(result.user))
+      localStorage.setItem("user:v1", JSON.stringify(result.user))
       router.push(ROUTES.dashboard)
     } catch {
       toast.error("Неверный email или пароль")

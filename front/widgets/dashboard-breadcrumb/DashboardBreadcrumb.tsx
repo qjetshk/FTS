@@ -36,6 +36,11 @@ function OrgCombobox() {
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Org | null>(null)
   const ref = React.useRef<HTMLDivElement>(null)
+  const inputRef = React.useRef<HTMLInputElement>(null)
+
+  React.useEffect(() => {
+    if (open) inputRef.current?.focus()
+  }, [open])
 
   React.useEffect(() => {
     if (!open) return
@@ -57,6 +62,7 @@ function OrgCombobox() {
   return (
     <div ref={ref} className="relative">
       <button
+        type="button"
         onClick={() => setOpen((v) => !v)}
         className="flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-0.5 text-sm text-foreground transition-colors hover:bg-muted"
       >
@@ -70,7 +76,8 @@ function OrgCombobox() {
           <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
             <Search strokeWidth={1.5} className="size-3.5 text-muted-foreground shrink-0" />
             <input
-              autoFocus
+              ref={inputRef}
+              aria-label="Поиск организации"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Поиск..."
@@ -80,6 +87,7 @@ function OrgCombobox() {
           <div className="py-1 max-h-48 overflow-y-auto">
             {filtered.map((org) => (
               <button
+                type="button"
                 key={org.id}
                 onClick={() => {
                   setSelected(org)

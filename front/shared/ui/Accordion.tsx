@@ -34,7 +34,7 @@ function AccordionTrigger({ className, children, ...props }: AccordionPrimitive.
         {...props}
       >
         {children}
-        <span className="relative ml-4 inline-flex shrink-0 w-4 h-4 text-muted-foreground">
+        <span className="relative ml-4 inline-flex shrink-0 size-4 text-muted-foreground">
           <span className="absolute top-1/2 left-0 w-full h-px bg-current -translate-y-1/2 rounded-[1px]" />
           <span className="absolute top-0 left-1/2 w-px h-full bg-current -translate-x-1/2 rounded-[1px] transition-transform duration-280 ease-[cubic-bezier(0.16,1,0.3,1)] group-aria-expanded/accordion-trigger:rotate-90" />
         </span>

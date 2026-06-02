@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 import { Search } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger, Input } from "@/shared/ui"
@@ -19,7 +19,10 @@ export function CountrySelect({ productId, clientId, countriesOfOrigin, currentC
   const [query, setQuery] = useState("")
   const [updateCountry, { isLoading }] = useUpdateCountryMutation()
 
-  useEffect(() => { if (!open) setQuery("") }, [open])
+  const handleOpenChange = (v: boolean) => {
+    setOpen(v)
+    if (!v) setQuery("")
+  }
 
   const filtered = countriesOfOrigin.filter((c) =>
     c.toLowerCase().includes(query.toLowerCase())
@@ -35,7 +38,7 @@ export function CountrySelect({ productId, clientId, countriesOfOrigin, currentC
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger>
         <span className={cn(
           "text-xs px-2 py-0.5 rounded border cursor-pointer hover:bg-accent transition-colors",
@@ -65,6 +68,7 @@ export function CountrySelect({ productId, clientId, countriesOfOrigin, currentC
           )}
           {filtered.map((country) => (
             <button
+              type="button"
               key={country}
               onClick={() => handleSelect(country)}
               disabled={isLoading}

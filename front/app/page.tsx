@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import {
   Button,
   Input,
@@ -14,6 +15,11 @@ import {
   AccordionContent,
 } from "@/shared/ui"
 import { CheckCircle, Download, Loader, Plus, Trash2, Upload } from "lucide-react"
+
+export const metadata: Metadata = {
+  title: "easyfts — таможенная отчётность для продавцов OZON",
+  description: "Автоматическая классификация товаров по ТН ВЭД и генерация XML статформ для продавцов OZON в ЕАЭС",
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
