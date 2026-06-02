@@ -313,7 +313,7 @@ function OrganizationsPageContent() {
       </Card>
 
       {/* Аккордеон */}
-      <Accordion type={"single" as const} collapsible defaultValue="api" className="flex flex-col gap-3">
+      <Accordion type={"single" as const} className="flex flex-col gap-3">
 
         <AccordionItem value="api" className="border border-border rounded-lg overflow-hidden px-4">
           <AccordionTrigger className="text-sm font-medium py-4">

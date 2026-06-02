@@ -165,29 +165,32 @@ export function DashboardBreadcrumb() {
         {crumbs.map((crumb, i) => (
           <React.Fragment key={crumb.href}>
             {i > 0 && <BreadcrumbSeparator />}
-            <BreadcrumbItem>
-              {crumb.isLast ? (
-                <>
-                  {/* Для organizations — OrgCrumb как последний элемент */}
-                  {crumb.seg === "organizations" ? (
+            {crumb.isLast && isOrgScoped && crumb.seg !== "organizations" ? (
+              // products/statforms: OrgCrumb и Page — два отдельных <li>
+              <>
+                <BreadcrumbItem>
+                  <OrgCrumb pageBase={pageBase} />
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </>
+            ) : (
+              <BreadcrumbItem>
+                {crumb.isLast ? (
+                  crumb.seg === "organizations" ? (
                     <OrgCrumb pageBase={pageBase} />
-                  ) : isOrgScoped ? (
-                    // Для products/statforms — OrgCrumb + сепаратор + название страницы
-                    <>
-                      <OrgCrumb pageBase={pageBase} />
-                      <BreadcrumbSeparator />
-                      <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-                    </>
                   ) : (
                     <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-                  )}
-                </>
-              ) : (
-                <BreadcrumbLink asChild>
-                  <Link href={crumb.href}>{crumb.label}</Link>
-                </BreadcrumbLink>
-              )}
-            </BreadcrumbItem>
+                  )
+                ) : (
+                  <BreadcrumbLink asChild>
+                    <Link href={crumb.href}>{crumb.label}</Link>
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
+            )}
           </React.Fragment>
         ))}
       </BreadcrumbList>
