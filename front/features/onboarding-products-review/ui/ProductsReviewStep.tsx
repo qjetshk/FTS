@@ -3,7 +3,12 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/shared/ui"
-import { useGetProductsSnapshotQuery, useUpdateTnvedMutation, isNeedsAttention } from "@/entities/product"
+import {
+  useGetProductsSnapshotQuery,
+  useUpdateTnvedMutation,
+  useUpdateCountryMutation,
+  isNeedsAttention,
+} from "@/entities/product"
 import { useCompleteOnboardingMutation } from "@/entities/user"
 import { ProductsTable, type PendingTnved } from "@/widgets/products-table/ProductsTable"
 
@@ -14,6 +19,7 @@ type Props = {
 
 export function ProductsReviewStep({ clientId, onComplete }: Props) {
   const [pendingTnved, setPendingTnved] = useState<Record<number, PendingTnved>>({})
+  const [pendingCountry, setPendingCountry] = useState<Record<number, string>>({})
   const [isSaving, setIsSaving] = useState(false)
 
   const { data: snapshot = [] } = useGetProductsSnapshotQuery(clientId, {
@@ -22,15 +28,15 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
   })
   const [completeOnboarding, { isLoading: completing }] = useCompleteOnboardingMutation()
   const [updateTnved] = useUpdateTnvedMutation()
+  const [updateCountry] = useUpdateCountryMutation()
 
   const total = snapshot.length
   const classified = snapshot.filter(p => p.tnvedStatus !== null).length
-  const pendingCount = Object.keys(pendingTnved).length
 
-  // A product is effectively resolved if it has a pending selection (tnved only) or no issues from server
+  // Consider pending selections as effectively resolved
   const effectiveNeedsAttention = snapshot.filter(p => {
     const tnvedOk = !!pendingTnved[p.productId] || p.tnvedStatus !== "NEEDS_REVIEW"
-    const countryOk = !p.countryConflict && !!p.country
+    const countryOk = !!pendingCountry[p.productId] || (!p.countryConflict && !!p.country)
     return !tnvedOk || !countryOk
   }).length
 
@@ -40,25 +46,33 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
     setPendingTnved(prev => ({ ...prev, [productId]: { tnvedCode: code, tnvedName: name, tnvedUnit: unit } }))
   }
 
+  const handleCountrySelect = (productId: number, country: string) => {
+    setPendingCountry(prev => ({ ...prev, [productId]: country }))
+  }
+
   const handleContinue = async () => {
     setIsSaving(true)
     try {
-      if (pendingCount > 0) {
-        await Promise.all(
-          Object.entries(pendingTnved).map(([productId, p]) =>
-            updateTnved({
-              productId: Number(productId),
-              clientId,
-              tnvedCode: p.tnvedCode,
-              tnvedName: p.tnvedName,
-              tnvedUnit: p.tnvedUnit,
-              tnvedStatus: "VERIFIED_BY_USER",
-              tnvedAlternatives: [],
-            }).unwrap()
-          )
-        )
-        setPendingTnved({})
-      }
+      await Promise.all([
+        ...Object.entries(pendingTnved).map(([productId, p]) =>
+          updateTnved({
+            productId: Number(productId),
+            clientId,
+            tnvedCode: p.tnvedCode,
+            tnvedName: p.tnvedName,
+            tnvedUnit: p.tnvedUnit,
+            tnvedStatus: "VERIFIED_BY_USER",
+            tnvedAlternatives: [],
+          }).unwrap()
+        ),
+        ...Object.entries(pendingCountry).map(([productId, country]) =>
+          updateCountry({
+            productId: Number(productId),
+            clientId,
+            country,
+          }).unwrap()
+        ),
+      ])
       await completeOnboarding()
       onComplete()
     } catch {
@@ -68,10 +82,12 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
     }
   }
 
+  const hasPending = Object.keys(pendingTnved).length > 0 || Object.keys(pendingCountry).length > 0
+
   const buttonLabel = () => {
     if (isSaving || completing) return "Сохраняем..."
     if (!canProceed) return "Исправьте все ошибки чтобы продолжить"
-    if (pendingCount > 0) return "Сохранить и перейти в дашборд"
+    if (hasPending) return "Сохранить и перейти в дашборд"
     return "Всё проверено — перейти в дашборд"
   }
 
@@ -98,6 +114,8 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
           clientId={clientId}
           pendingTnvedMap={pendingTnved}
           onTnvedSelect={handleTnvedSelect}
+          pendingCountryMap={pendingCountry}
+          onCountrySelect={handleCountrySelect}
         />
       </div>
 

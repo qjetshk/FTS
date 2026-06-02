@@ -18,6 +18,8 @@ type Props = {
   className?: string
   pendingTnvedMap: Record<number, PendingTnved>
   onTnvedSelect: (productId: number, code: string, name: string | null, unit: string | null) => void
+  pendingCountryMap: Record<number, string>
+  onCountrySelect: (productId: number, country: string) => void
 }
 
 const HEADS = ["", "Название", "Категория", "Страна-изготовитель", "Артикул", "SKU", "ТН ВЭД", "Ед."]
@@ -39,10 +41,12 @@ function TCell({ value, mono, bold, muted }: { value?: string | null; mono?: boo
   )
 }
 
-function Row({ product, clientId, gridCols, variant, pending, onTnvedSelect }: {
+function Row({ product, clientId, gridCols, variant, pending, onTnvedSelect, pendingCountry, onCountrySelect }: {
   product: Product; clientId: number; gridCols: string; variant: "attention" | "main"
   pending?: PendingTnved
   onTnvedSelect: (productId: number, code: string, name: string | null, unit: string | null) => void
+  pendingCountry?: string
+  onCountrySelect: (productId: number, country: string) => void
 }) {
   const countryIssue = product.countryConflict || !product.country
   const showTnvedPopup = !!product.tnvedStatus && product.tnvedStatus !== "VERIFIED_BY_USER"
@@ -86,7 +90,12 @@ function Row({ product, clientId, gridCols, variant, pending, onTnvedSelect }: {
       </div>
       <div className="flex items-center p-2 overflow-hidden">
         {countryIssue
-          ? <CountrySelect productId={product.productId} clientId={clientId} countriesOfOrigin={product.countriesOfOrigin} currentCountry={product.country} />
+          ? <CountrySelect
+              productId={product.productId}
+              currentCountry={pendingCountry ?? product.country}
+              isPending={!!pendingCountry}
+              onSelect={(country) => onCountrySelect(product.productId, country)}
+            />
           : <span className="text-xs truncate">{product.country}</span>}
       </div>
       <div className="flex items-center p-2 overflow-hidden font-mono text-muted-foreground text-xs">{product.offerId}</div>
@@ -132,12 +141,14 @@ function Row({ product, clientId, gridCols, variant, pending, onTnvedSelect }: {
   )
 }
 
-function TableBlock({ items, clientId, isLoading, variant, label, maxHeight, flex, pendingTnvedMap, onTnvedSelect }: {
+function TableBlock({ items, clientId, isLoading, variant, label, maxHeight, flex, pendingTnvedMap, onTnvedSelect, pendingCountryMap, onCountrySelect }: {
   items: Product[]; clientId: number
   isLoading?: boolean; variant: "attention" | "main"
   label?: string; maxHeight?: number; flex?: boolean
   pendingTnvedMap: Record<number, PendingTnved>
   onTnvedSelect: (productId: number, code: string, name: string | null, unit: string | null) => void
+  pendingCountryMap: Record<number, string>
+  onCountrySelect: (productId: number, country: string) => void
 }) {
   const [sizes, setSizes] = useState(DEFAULT_SIZES)
   const gridCols = sizes.map(s => `${s}fr`).join(" ")
@@ -196,6 +207,8 @@ function TableBlock({ items, clientId, isLoading, variant, label, maxHeight, fle
                   variant={variant}
                   pending={pendingTnvedMap[p.productId]}
                   onTnvedSelect={onTnvedSelect}
+                  pendingCountry={pendingCountryMap[p.productId]}
+                  onCountrySelect={onCountrySelect}
                 />
               ))
           }
@@ -205,7 +218,7 @@ function TableBlock({ items, clientId, isLoading, variant, label, maxHeight, fle
   )
 }
 
-export function ProductsTable({ clientId, className, pendingTnvedMap, onTnvedSelect }: Props) {
+export function ProductsTable({ clientId, className, pendingTnvedMap, onTnvedSelect, pendingCountryMap, onCountrySelect }: Props) {
   const [mainPage, setMainPage] = useState(1)
 
   const { data, isLoading } = useGetProductsQuery({ clientId, page: 1, limit: 100 })
@@ -239,6 +252,8 @@ export function ProductsTable({ clientId, className, pendingTnvedMap, onTnvedSel
           maxHeight={attentionMaxH}
           pendingTnvedMap={pendingTnvedMap}
           onTnvedSelect={onTnvedSelect}
+          pendingCountryMap={pendingCountryMap}
+          onCountrySelect={onCountrySelect}
         />
       )}
 
@@ -251,6 +266,8 @@ export function ProductsTable({ clientId, className, pendingTnvedMap, onTnvedSel
         flex
         pendingTnvedMap={pendingTnvedMap}
         onTnvedSelect={onTnvedSelect}
+        pendingCountryMap={pendingCountryMap}
+        onCountrySelect={onCountrySelect}
       />
 
       {totalGoodPages > 1 && (

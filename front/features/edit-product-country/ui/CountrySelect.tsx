@@ -1,59 +1,55 @@
 "use client"
 
 import { useState } from "react"
-import { toast } from "sonner"
 import { Search } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger, Input, Button } from "@/shared/ui"
-import { useUpdateCountryMutation } from "@/entities/product"
+import { FTS_COUNTRIES } from "@/shared/config"
 import { cn } from "@/shared/lib"
 
 type Props = {
   productId: number
-  clientId: number
-  countriesOfOrigin: string[]
-  currentCountry: string | null
+  currentCountry: string | null // effective value (pending ?? server)
+  isPending?: boolean
+  onSelect: (country: string) => void // called with toUpperCase country name
 }
 
-export function CountrySelect({ productId, clientId, countriesOfOrigin, currentCountry }: Props) {
+export function CountrySelect({ productId: _productId, currentCountry, isPending, onSelect }: Props) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
-  const [updateCountry, { isLoading }] = useUpdateCountryMutation()
 
   const handleOpenChange = (v: boolean) => {
     setOpen(v)
     if (!v) setQuery("")
   }
 
-  const filtered = countriesOfOrigin.filter((c) =>
-    c.toLowerCase().includes(query.toLowerCase())
-  )
+  const q = query.trim().toLowerCase()
+  const filtered = q
+    ? FTS_COUNTRIES.filter(
+        (c) => c.name.toLowerCase().includes(q) || c.alpha2.toLowerCase().includes(q)
+      )
+    : FTS_COUNTRIES
 
-  const handleSelect = async (country: string) => {
-    try {
-      await updateCountry({ productId, clientId, country }).unwrap()
-      setOpen(false)
-    } catch {
-      toast.error("Не удалось сохранить страну")
-    }
-  }
+  const isActive = (name: string) =>
+    currentCountry?.toUpperCase() === name.toUpperCase()
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger>
         <span className={cn(
-          "text-xs px-2 py-0.5 rounded border cursor-pointer hover:bg-accent transition-colors",
-          currentCountry ? "border-border" : "border-destructive/50 text-destructive"
+          "text-xs px-2 py-0.5 rounded border cursor-pointer hover:bg-accent transition-colors truncate max-w-full block",
+          isPending ? "border-blue-300 text-blue-600 font-medium" : currentCountry ? "border-border" : "border-destructive/50 text-destructive"
         )}>
+          {isPending && <span className="inline-block size-1.5 rounded-full bg-blue-500 mr-1 mb-0.5 shrink-0" />}
           {currentCountry ?? "Выбрать..."}
         </span>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-0" align="start">
+      <PopoverContent className="w-72 p-0" align="start">
 
         <div className="px-3 py-2 border-b border-border">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
             <Input
-              placeholder="Поиск страны..."
+              placeholder="Название или код (RU, CN…)"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="h-7 pl-7 text-xs"
@@ -62,22 +58,22 @@ export function CountrySelect({ productId, clientId, countriesOfOrigin, currentC
           </div>
         </div>
 
-        <div className="max-h-48 overflow-y-auto">
+        <div className="max-h-56 overflow-y-auto">
           {filtered.length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-3">Ничего не найдено</p>
           )}
           {filtered.map((country) => (
             <Button
               variant="ghost"
-              key={country}
-              onClick={() => handleSelect(country)}
-              disabled={isLoading}
+              key={country.alpha2}
+              onClick={() => { onSelect(country.name); setOpen(false) }}
               className={cn(
-                "w-full justify-start px-3 py-1.5 h-auto text-xs rounded-none border-b border-border/50 last:border-0",
-                currentCountry === country && "font-medium text-primary"
+                "w-full justify-start gap-2 px-3 py-1.5 h-auto text-xs rounded-none border-b border-border/50 last:border-0",
+                isActive(country.name) && "font-medium text-primary"
               )}
             >
-              {country}
+              <span className="font-mono text-muted-foreground shrink-0 w-6">{country.alpha2}</span>
+              <span className="truncate">{country.name}</span>
             </Button>
           ))}
         </div>
