@@ -47,10 +47,15 @@ function AccordionContent({ className, children, ...props }: AccordionPrimitive.
   return (
     <AccordionPrimitive.Panel
       data-slot="accordion-content"
-      className="overflow-hidden text-sm data-open:animate-accordion-down data-closed:animate-accordion-up"
+      className={cn(
+        "overflow-hidden text-sm",
+        "h-(--accordion-panel-height)",
+        "transition-[height] duration-[280ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "data-starting-style:h-0 data-ending-style:h-0"
+      )}
       {...props}
     >
-      <div className={cn("h-(--accordion-panel-height) pb-4 pt-0 data-ending-style:h-0 data-starting-style:h-0", className)}>
+      <div className={cn("pb-4 pt-0", className)}>
         {children}
       </div>
     </AccordionPrimitive.Panel>
