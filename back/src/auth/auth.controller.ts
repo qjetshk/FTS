@@ -77,4 +77,11 @@ export class AuthController {
   async completeOnboarding(@CurrentUser() user: JwtPayload) {
     return this.authService.completeOnboarding(user.id);
   }
+
+  @Post('reset-onboarding')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async resetOnboarding(@CurrentUser() user: JwtPayload) {
+    return this.authService.resetOnboarding(user.id);
+  }
 }

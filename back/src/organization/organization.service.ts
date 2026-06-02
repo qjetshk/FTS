@@ -69,6 +69,37 @@ export class OrganizationService {
     return { message: 'Организация успешно создана!' };
   }
 
+  async getAllOrganizations(userId: string) {
+    return this.prisma.organization.findMany({
+      where: { userId },
+      select: { id: true, fullOrg: true, inn: true, ogrn: true, fullOpf: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async getOrganizationById(id: string, userId: string) {
+    const organization = await this.prisma.organization.findFirst({
+      where: { id, userId },
+      include: {
+        declarant: {
+          select: {
+            id: true,
+            name: true,
+            surname: true,
+            patronymic: true,
+            position: true,
+            email: true,
+            phone: true,
+            document: true,
+          },
+        },
+      },
+    });
+
+    if (!organization) throw new NotFoundException('Организация не найдена');
+    return organization;
+  }
+
   async getFirstOrganization(userId: string) {
     const organization = await this.prisma.organization.findFirst({
       where: { userId },
@@ -181,6 +212,34 @@ export class OrganizationService {
     const { id, ...data } = dto;
     await this.prisma.declarant.update({ where: { id }, data });
     return { message: 'Декларант успешно обновлен!' };
+  }
+
+  async validateApiKey(userId: string) {
+    const org = await this.prisma.organization.findFirst({
+      where: { userId },
+      select: { ozonApiKey: true, ozonClientId: true },
+    });
+
+    if (!org) throw new NotFoundException('Организация не найдена');
+
+    try {
+      const res = await fetch('https://api-seller.ozon.ru/v2/product/list', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Client-Id': String(org.ozonClientId),
+          'Api-Key': org.ozonApiKey,
+        },
+        body: JSON.stringify({ filter: {}, last_id: '', limit: 1 }),
+      });
+
+      if (res.status === 200) return { valid: true };
+      if (res.status === 401 || res.status === 403)
+        return { valid: false, error: 'Ключ недействителен или отозван' };
+      return { valid: false, error: `OZON вернул статус ${res.status}` };
+    } catch {
+      return { valid: false, error: 'Ошибка подключения к OZON' };
+    }
   }
 
   async createDocument(dto: CreateDocumentDto) {

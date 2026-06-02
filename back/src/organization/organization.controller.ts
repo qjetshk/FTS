@@ -33,6 +33,20 @@ export class OrganizationController {
     return this.organizationService.createOrganization(dto);
   }
 
+  @Get('get-all')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async getAllOrganizations(@CurrentUser() user: JwtPayload) {
+    return this.organizationService.getAllOrganizations(user.id);
+  }
+
+  @Get('get-by-id/:id')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async getOrganizationById(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.organizationService.getOrganizationById(id, user.id);
+  }
+
   @Get('get-first')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
@@ -81,6 +95,13 @@ export class OrganizationController {
   @UseGuards(JwtAuthGuard)
   async updateDeclarant(@Body() dto: UpdateDeclarantDto) {
     return this.organizationService.updateDeclarant(dto);
+  }
+
+  @Get('validate-api-key')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async validateApiKey(@CurrentUser() user: JwtPayload) {
+    return this.organizationService.validateApiKey(user.id);
   }
 
   @Post('declarant/document/create')

@@ -47,3 +47,11 @@ export type Organization = {
 }
 
 export type CompanyInfoResponse = Organization
+
+export type OrgListItem = {
+  id: string
+  fullOrg: string
+  inn: string
+  ogrn: string
+  fullOpf: string
+}

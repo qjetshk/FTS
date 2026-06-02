@@ -1,14 +1,26 @@
 import { baseApi } from "@/shared/api"
-import type { Organization } from "../model/organization.type"
+import type { Organization, OrgListItem } from "../model/organization.type"
 
 const organizationApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
+    getAllOrgs: build.query<OrgListItem[], void>({
+      query: () => "/organizations/get-all",
+      providesTags: ["Organization"],
+    }),
+    getOrgById: build.query<Organization, string>({
+      query: (id) => `/organizations/get-by-id/${id}`,
+      providesTags: ["Organization"],
+    }),
     getFirstOrg: build.query<Organization, void>({
       query: () => "/organizations/get-first",
       providesTags: ["Organization"],
     }),
+    validateApiKey: build.query<{ valid: boolean; error?: string }, void>({
+      query: () => "/organizations/validate-api-key",
+    }),
     updateOrganization: build.mutation<{ message: string }, {
       id: string
+      ozonApiKey?: string
       fullAddress?: string
       country?: string
       region?: string
@@ -55,7 +67,10 @@ const organizationApi = baseApi.injectEndpoints({
 })
 
 export const {
+  useGetAllOrgsQuery,
+  useGetOrgByIdQuery,
   useGetFirstOrgQuery,
+  useValidateApiKeyQuery,
   useUpdateOrganizationMutation,
   useUpdateDeclarantMutation,
   useCreateDocumentMutation,

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { Building2, Check, ChevronsUpDown, Search } from "lucide-react"
 import {
   Breadcrumb,
@@ -11,8 +11,9 @@ import {
   BreadcrumbLink,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  Button,
 } from "@/shared/ui"
+import { ROUTES } from "@/shared/config"
+import { useGetAllOrgsQuery } from "@/entities/organization"
 
 const SEGMENT_LABELS: Record<string, string> = {
   dashboard: "Дашборд",
@@ -24,20 +25,18 @@ const SEGMENT_LABELS: Record<string, string> = {
   notifications: "Уведомления",
 }
 
-// Stub — will be replaced with RTK Query
-const STUB_ORGS = [
-  { id: "1", name: "ООО Ромашка", inn: "7701234567" },
-  { id: "2", name: "ИП Иванов А.С.", inn: "770987654321" },
-]
-
-type Org = (typeof STUB_ORGS)[number]
-
-function OrgCombobox() {
+function OrgCrumb() {
+  const { data: orgs = [] } = useGetAllOrgsQuery()
+  const searchParams = useSearchParams()
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
-  const [selected, setSelected] = React.useState<Org | null>(null)
   const ref = React.useRef<HTMLDivElement>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
+
+  const selectedId = searchParams?.get("orgId") ?? orgs[0]?.id
+  const selectedOrg = orgs.find((o) => o.id === selectedId) ?? orgs[0]
+  const name = selectedOrg?.fullOrg ?? "Организация"
+  const shortName = name.length > 30 ? name.slice(0, 28) + "…" : name
 
   React.useEffect(() => {
     if (open) inputRef.current?.focus()
@@ -48,65 +47,76 @@ function OrgCombobox() {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false)
+        setSearch("")
       }
     }
     document.addEventListener("mousedown", handler)
     return () => document.removeEventListener("mousedown", handler)
   }, [open])
 
-  const filtered = STUB_ORGS.filter(
-    (org) =>
-      org.name.toLowerCase().includes(search.toLowerCase()) ||
-      org.inn.includes(search)
+  const orgHref = (id: string) => `${ROUTES.organizations}?orgId=${id}`
+
+  // Одна орга — просто ссылка
+  if (orgs.length <= 1) {
+    return (
+      <Link
+        href={selectedOrg ? orgHref(selectedOrg.id) : ROUTES.organizations}
+        className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-sm text-foreground hover:bg-accent transition-colors"
+      >
+        <Building2 strokeWidth={1.5} className="size-3.5 text-muted-foreground" />
+        <span>{shortName}</span>
+      </Link>
+    )
+  }
+
+  // Несколько орг — дропдаун
+  const filtered = orgs.filter(
+    (o) =>
+      o.fullOrg.toLowerCase().includes(search.toLowerCase()) ||
+      o.inn.includes(search)
   )
 
   return (
     <div ref={ref} className="relative">
-      <Button
-        variant="ghost"
+      <button
+        type="button"
         onClick={() => setOpen((v) => !v)}
-        className="gap-1.5 px-1.5 py-0.5 h-auto text-sm text-foreground"
+        className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-sm text-foreground hover:bg-accent transition-colors"
       >
         <Building2 strokeWidth={1.5} className="size-3.5 text-muted-foreground" />
-        <span>{selected?.name ?? "Организации"}</span>
+        <span>{shortName}</span>
         <ChevronsUpDown strokeWidth={1.5} className="size-3 text-muted-foreground" />
-      </Button>
+      </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1 w-64 rounded-xl border border-border bg-popover shadow-md z-50 overflow-hidden">
+        <div className="absolute top-full left-0 mt-1 w-72 rounded-xl border border-border bg-popover shadow-md z-50 overflow-hidden">
           <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
             <Search strokeWidth={1.5} className="size-3.5 text-muted-foreground shrink-0" />
             <input
               ref={inputRef}
-              aria-label="Поиск организации"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Поиск..."
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
-          <div className="py-1 max-h-48 overflow-y-auto">
+          <div className="py-1 max-h-52 overflow-y-auto">
             {filtered.map((org) => (
-              <Button
-                variant="ghost"
+              <Link
                 key={org.id}
-                onClick={() => {
-                  setSelected(org)
-                  setOpen(false)
-                  setSearch("")
-                }}
-                className="w-full justify-start gap-2 px-3 py-2 h-auto text-sm"
+                href={orgHref(org.id)}
+                onClick={() => { setOpen(false); setSearch("") }}
+                className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors"
               >
-                {selected?.id === org.id ? (
-                  <Check strokeWidth={1.5} className="size-3.5 text-primary shrink-0" />
-                ) : (
-                  <span className="size-3.5 shrink-0" />
-                )}
+                {org.id === selectedId
+                  ? <Check strokeWidth={1.5} className="size-3.5 text-primary shrink-0" />
+                  : <span className="size-3.5 shrink-0" />
+                }
                 <div className="min-w-0">
-                  <div className="truncate">{org.name}</div>
-                  <div className="text-xs text-muted-foreground">{org.inn}</div>
+                  <div className="truncate">{org.fullOrg}</div>
+                  <div className="text-xs text-muted-foreground">ИНН {org.inn}</div>
                 </div>
-              </Button>
+              </Link>
             ))}
             {filtered.length === 0 && (
               <p className="px-3 py-2 text-sm text-muted-foreground">Не найдено</p>
@@ -140,7 +150,7 @@ export function DashboardBreadcrumb() {
             <BreadcrumbItem>
               {crumb.isLast ? (
                 crumb.isOrg ? (
-                  <OrgCombobox />
+                  <OrgCrumb />
                 ) : (
                   <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
                 )

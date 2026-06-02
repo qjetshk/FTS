@@ -169,11 +169,11 @@ function Sidebar({ side = "left", variant = "sidebar", collapsible = "icon", cla
       data-variant={variant}
       data-side={side}
       className={cn(
-        "group/sidebar relative flex h-svh flex-col bg-sidebar border-r border-sidebar-border",
+        "group/sidebar sticky top-0 self-start flex h-screen flex-col bg-sidebar border-r border-sidebar-border",
         "transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width]",
         state === "expanded" ? "w-(--sidebar-width)" : collapsible === "icon" ? "w-(--sidebar-collapsed-width)" : "w-0 border-r-0",
-        variant === "floating" && "m-2 h-[calc(100svh-1rem)] rounded-xl border shadow-sm",
-        variant === "inset" && "m-2 h-[calc(100svh-1rem)] rounded-xl",
+        variant === "floating" && "m-2 h-[calc(100vh-1rem)] rounded-xl border shadow-sm",
+        variant === "inset" && "m-2 h-[calc(100vh-1rem)] rounded-xl",
         className
       )}
       {...props}
@@ -229,7 +229,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
 
 // ── SidebarInset ──────────────────────────────────────────
 function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
-  return <main data-sidebar="inset" className={cn("relative flex flex-1 flex-col overflow-hidden", className)} {...props} />
+  return <main data-sidebar="inset" className={cn("relative flex flex-1 flex-col min-w-0", className)} {...props} />
 }
 
 // ── Sections ──────────────────────────────────────────────

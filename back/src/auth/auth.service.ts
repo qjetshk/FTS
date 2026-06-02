@@ -187,4 +187,12 @@ export class AuthService {
     });
     return { message: 'Онбординг завершён' };
   }
+
+  async resetOnboarding(userId: string) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { isOnboardingComplete: false },
+    });
+    return { message: 'Онбординг сброшен' };
+  }
 }

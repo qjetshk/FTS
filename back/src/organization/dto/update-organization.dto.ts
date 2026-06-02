@@ -7,6 +7,10 @@ export class UpdateOrganizationDto {
 
   @IsString()
   @IsOptional()
+  ozonApiKey?: string | null;
+
+  @IsString()
+  @IsOptional()
   fullAddress?: string | null;
 
   @IsString()

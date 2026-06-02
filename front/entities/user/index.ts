@@ -7,5 +7,6 @@ export {
   useLogoutMutation,
   useMeQuery,
   useCompleteOnboardingMutation,
+  useResetOnboardingMutation,
 } from "./api/auth.api"
 export { useUser } from "./lib/use-user.lib"
