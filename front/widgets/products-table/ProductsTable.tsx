@@ -16,10 +16,11 @@ export type PendingTnved = { tnvedCode: string; tnvedName: string | null; tnvedU
 type Props = {
   clientId: number
   className?: string
-  pendingTnvedMap: Record<number, PendingTnved>
-  onTnvedSelect: (productId: number, code: string, name: string | null, unit: string | null) => void
-  pendingCountryMap: Record<number, string>
-  onCountrySelect: (productId: number, country: string) => void
+  showClassificationProgress?: boolean
+  pendingTnvedMap?: Record<number, PendingTnved>
+  onTnvedSelect?: (productId: number, code: string, name: string | null, unit: string | null) => void
+  pendingCountryMap?: Record<number, string>
+  onCountrySelect?: (productId: number, country: string) => void
 }
 
 const HEADS = ["", "Название", "Категория", "Страна-изготовитель", "Артикул", "SKU", "ТН ВЭД", "Ед."]
@@ -218,11 +219,14 @@ function TableBlock({ items, clientId, isLoading, variant, label, maxHeight, fle
   )
 }
 
-export function ProductsTable({ clientId, className, pendingTnvedMap, onTnvedSelect, pendingCountryMap, onCountrySelect }: Props) {
+export function ProductsTable({ clientId, className, showClassificationProgress = false, pendingTnvedMap = {}, onTnvedSelect = () => {}, pendingCountryMap = {}, onCountrySelect = () => {} }: Props) {
   const [mainPage, setMainPage] = useState(1)
 
   const { data, isLoading } = useGetProductsQuery({ clientId, page: 1, limit: 100 })
-  const { data: snapshot = [] } = useGetProductsSnapshotQuery(clientId, { pollingInterval: 5000, skip: !clientId })
+  const { data: snapshot = [] } = useGetProductsSnapshotQuery(clientId, {
+    pollingInterval: showClassificationProgress ? 5000 : 0,
+    skip: !clientId || !showClassificationProgress,
+  })
 
   const allItems = data?.items ?? []
   const badItems = allItems.filter(p => isNeedsAttention({ tnvedStatus: p.tnvedStatus, countryConflict: p.countryConflict, country: p.country }))
@@ -235,7 +239,7 @@ export function ProductsTable({ clientId, className, pendingTnvedMap, onTnvedSel
 
   return (
     <div className={cn("flex flex-col justify-end gap-3 h-full", className)}>
-      {nullCount > 0 && (
+      {showClassificationProgress && nullCount > 0 && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
           <span className="size-1.5 rounded-full bg-primary animate-pulse" />
           Классификация: {snapshot.length - nullCount}/{snapshot.length}

@@ -179,6 +179,23 @@ export class ProductService {
     };
   }
 
+  async verifyAllTnved(clientId: number) {
+    const organization = await this.prisma.organization.findUniqueOrThrow({
+      where: { ozonClientId: clientId },
+      select: { id: true },
+    });
+
+    await this.prisma.product.updateMany({
+      where: {
+        organizationId: organization.id,
+        tnvedStatus: { not: null },
+      },
+      data: { tnvedStatus: 'VERIFIED_BY_USER' },
+    });
+
+    return { message: 'Все коды подтверждены' };
+  }
+
   async updateCountry(dto: UpdateCountryDto) {
     const organization = await this.prisma.organization.findUniqueOrThrow({
       where: { ozonClientId: dto.clientId },

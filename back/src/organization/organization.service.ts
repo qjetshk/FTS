@@ -223,7 +223,7 @@ export class OrganizationService {
     if (!org) throw new NotFoundException('Организация не найдена');
 
     try {
-      const res = await fetch('https://api-seller.ozon.ru/v2/product/list', {
+      const res = await fetch('https://api-seller.ozon.ru/v1/seller/info', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

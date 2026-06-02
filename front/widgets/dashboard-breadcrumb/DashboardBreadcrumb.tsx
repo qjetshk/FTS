@@ -13,7 +13,7 @@ import {
   BreadcrumbSeparator,
 } from "@/shared/ui"
 import { ROUTES } from "@/shared/config"
-import { useGetAllOrgsQuery } from "@/entities/organization"
+import { useGetAllOrgsQuery, useGetFirstOrgQuery } from "@/entities/organization"
 
 const SEGMENT_LABELS: Record<string, string> = {
   dashboard: "Дашборд",
@@ -25,8 +25,23 @@ const SEGMENT_LABELS: Record<string, string> = {
   notifications: "Уведомления",
 }
 
-function OrgCrumb() {
+// Страницы где нужен выбор орги в бредкрамбе
+const ORG_SCOPED = new Set(["products", "statforms", "organizations"])
+
+// Базовый URL для каждой org-scoped страницы
+const ORG_PAGE_BASE: Record<string, string> = {
+  products: ROUTES.products,
+  statforms: ROUTES.statforms,
+  organizations: ROUTES.organizations,
+}
+
+type OrgCrumbProps = {
+  pageBase: string  // куда навигировать при выборе
+}
+
+function OrgCrumb({ pageBase }: OrgCrumbProps) {
   const { data: orgs = [] } = useGetAllOrgsQuery()
+  const { data: firstOrg } = useGetFirstOrgQuery()
   const searchParams = useSearchParams()
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
@@ -35,8 +50,9 @@ function OrgCrumb() {
 
   const selectedId = searchParams?.get("orgId") ?? orgs[0]?.id
   const selectedOrg = orgs.find((o) => o.id === selectedId) ?? orgs[0]
-  const name = selectedOrg?.fullOrg ?? "Организация"
-  const shortName = name.length > 30 ? name.slice(0, 28) + "…" : name
+  const name = selectedOrg?.fullOrg ?? firstOrg?.fullOrg ?? "Организация"
+
+  const orgHref = (id: string) => `${pageBase}?orgId=${id}`
 
   React.useEffect(() => {
     if (open) inputRef.current?.focus()
@@ -54,17 +70,15 @@ function OrgCrumb() {
     return () => document.removeEventListener("mousedown", handler)
   }, [open])
 
-  const orgHref = (id: string) => `${ROUTES.organizations}?orgId=${id}`
-
-  // Одна орга — просто ссылка
+  // Одна орга — ссылка без шеврона
   if (orgs.length <= 1) {
     return (
       <Link
-        href={selectedOrg ? orgHref(selectedOrg.id) : ROUTES.organizations}
-        className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-sm text-foreground hover:bg-accent transition-colors"
+        href={selectedOrg ? orgHref(selectedOrg.id) : pageBase}
+        className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-sm text-foreground hover:bg-accent transition-colors min-w-0 max-w-56"
       >
-        <Building2 strokeWidth={1.5} className="size-3.5 text-muted-foreground" />
-        <span>{shortName}</span>
+        <Building2 strokeWidth={1.5} className="size-3.5 text-muted-foreground shrink-0" />
+        <span className="truncate">{name}</span>
       </Link>
     )
   }
@@ -77,15 +91,15 @@ function OrgCrumb() {
   )
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative min-w-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-sm text-foreground hover:bg-accent transition-colors"
+        className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-sm text-foreground hover:bg-accent transition-colors max-w-56"
       >
-        <Building2 strokeWidth={1.5} className="size-3.5 text-muted-foreground" />
-        <span>{shortName}</span>
-        <ChevronsUpDown strokeWidth={1.5} className="size-3 text-muted-foreground" />
+        <Building2 strokeWidth={1.5} className="size-3.5 text-muted-foreground shrink-0" />
+        <span className="truncate">{name}</span>
+        <ChevronsUpDown strokeWidth={1.5} className="size-3 text-muted-foreground shrink-0" />
       </button>
 
       {open && (
@@ -135,11 +149,15 @@ export function DashboardBreadcrumb() {
   if (segments.length === 0) return null
 
   const crumbs = segments.map((seg, i) => ({
+    seg,
     label: SEGMENT_LABELS[seg] ?? seg,
     href: "/" + segments.slice(0, i + 1).join("/"),
     isLast: i === segments.length - 1,
-    isOrg: seg === "organizations",
   }))
+
+  const lastSeg = crumbs[crumbs.length - 1]?.seg ?? ""
+  const isOrgScoped = ORG_SCOPED.has(lastSeg)
+  const pageBase = ORG_PAGE_BASE[lastSeg] ?? ""
 
   return (
     <Breadcrumb>
@@ -149,11 +167,21 @@ export function DashboardBreadcrumb() {
             {i > 0 && <BreadcrumbSeparator />}
             <BreadcrumbItem>
               {crumb.isLast ? (
-                crumb.isOrg ? (
-                  <OrgCrumb />
-                ) : (
-                  <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-                )
+                <>
+                  {/* Для organizations — OrgCrumb как последний элемент */}
+                  {crumb.seg === "organizations" ? (
+                    <OrgCrumb pageBase={pageBase} />
+                  ) : isOrgScoped ? (
+                    // Для products/statforms — OrgCrumb + сепаратор + название страницы
+                    <>
+                      <OrgCrumb pageBase={pageBase} />
+                      <BreadcrumbSeparator />
+                      <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                    </>
+                  ) : (
+                    <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                  )}
+                </>
               ) : (
                 <BreadcrumbLink asChild>
                   <Link href={crumb.href}>{crumb.label}</Link>

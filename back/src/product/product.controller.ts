@@ -68,6 +68,13 @@ export class ProductController {
     return this.productService.updateTnved(dto);
   }
 
+  @Post('verify-all')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async verifyAllTnved(@Body('clientId') clientId: number) {
+    return this.productService.verifyAllTnved(Number(clientId));
+  }
+
   @Post('update-country')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)

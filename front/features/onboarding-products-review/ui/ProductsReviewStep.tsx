@@ -6,6 +6,7 @@ import { Button } from "@/shared/ui"
 import {
   useGetProductsSnapshotQuery,
   useUpdateTnvedMutation,
+  useVerifyAllTnvedMutation,
   useUpdateCountryMutation,
   isNeedsAttention,
 } from "@/entities/product"
@@ -28,6 +29,7 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
   })
   const [completeOnboarding, { isLoading: completing }] = useCompleteOnboardingMutation()
   const [updateTnved] = useUpdateTnvedMutation()
+  const [verifyAllTnved] = useVerifyAllTnvedMutation()
   const [updateCountry] = useUpdateCountryMutation()
 
   const total = snapshot.length
@@ -53,6 +55,7 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
   const handleContinue = async () => {
     setIsSaving(true)
     try {
+      // Сохраняем явно выбранные юзером коды (с конкретными данными)
       await Promise.all([
         ...Object.entries(pendingTnved).map(([productId, p]) =>
           updateTnved({
@@ -73,6 +76,8 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
           }).unwrap()
         ),
       ])
+      // Массово помечаем все остальные классифицированные товары как VERIFIED_BY_USER
+      await verifyAllTnved({ clientId }).unwrap()
       await completeOnboarding()
       onComplete()
     } catch {
@@ -112,6 +117,7 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
       <div className="flex-1 min-h-0">
         <ProductsTable
           clientId={clientId}
+          showClassificationProgress
           pendingTnvedMap={pendingTnved}
           onTnvedSelect={handleTnvedSelect}
           pendingCountryMap={pendingCountry}

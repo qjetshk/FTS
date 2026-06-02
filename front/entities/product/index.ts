@@ -4,5 +4,6 @@ export {
   useGetProductsQuery,
   useGetProductsSnapshotQuery,
   useUpdateTnvedMutation,
+  useVerifyAllTnvedMutation,
   useUpdateCountryMutation,
 } from "./api/product.api"
