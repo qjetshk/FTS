@@ -11,6 +11,7 @@ import {
   BreadcrumbLink,
   BreadcrumbPage,
   BreadcrumbSeparator,
+  Button,
 } from "@/shared/ui"
 
 const SEGMENT_LABELS: Record<string, string> = {
@@ -61,15 +62,15 @@ function OrgCombobox() {
 
   return (
     <div ref={ref} className="relative">
-      <button
-        type="button"
+      <Button
+        variant="ghost"
         onClick={() => setOpen((v) => !v)}
-        className="flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-0.5 text-sm text-foreground transition-colors hover:bg-muted"
+        className="gap-1.5 px-1.5 py-0.5 h-auto text-sm text-foreground"
       >
         <Building2 strokeWidth={1.5} className="size-3.5 text-muted-foreground" />
         <span>{selected?.name ?? "Организации"}</span>
         <ChevronsUpDown strokeWidth={1.5} className="size-3 text-muted-foreground" />
-      </button>
+      </Button>
 
       {open && (
         <div className="absolute top-full left-0 mt-1 w-64 rounded-xl border border-border bg-popover shadow-md z-50 overflow-hidden">
@@ -86,15 +87,15 @@ function OrgCombobox() {
           </div>
           <div className="py-1 max-h-48 overflow-y-auto">
             {filtered.map((org) => (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 key={org.id}
                 onClick={() => {
                   setSelected(org)
                   setOpen(false)
                   setSearch("")
                 }}
-                className="flex cursor-pointer items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-muted transition-colors"
+                className="w-full justify-start gap-2 px-3 py-2 h-auto text-sm"
               >
                 {selected?.id === org.id ? (
                   <Check strokeWidth={1.5} className="size-3.5 text-primary shrink-0" />
@@ -105,7 +106,7 @@ function OrgCombobox() {
                   <div className="truncate">{org.name}</div>
                   <div className="text-xs text-muted-foreground">{org.inn}</div>
                 </div>
-              </button>
+              </Button>
             ))}
             {filtered.length === 0 && (
               <p className="px-3 py-2 text-sm text-muted-foreground">Не найдено</p>

@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react"
 import { toast } from "sonner"
 import { Search } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger, Input } from "@/shared/ui"
+import { Popover, PopoverContent, PopoverTrigger, Input, Button } from "@/shared/ui"
 import { useUpdateTnvedMutation, type TnvedAlternative } from "@/entities/product"
 import { useLazySearchTnvedQuery } from "@/entities/tnved"
 import type { TnvedItem } from "@/entities/tnved"
@@ -92,11 +92,11 @@ export function TnvedReviewPopover({ productId, clientId, tnvedCode, tnvedName, 
             <p className="text-xs text-muted-foreground mb-1">Варианты ИИ</p>
             <div className="flex flex-col gap-0.5">
               {alternatives.map((alt) => (
-                <button type="button" key={alt.id} onClick={() => handleSelect(alt)} disabled={saving}
-                  className="flex items-start gap-1.5 w-full text-left px-2 py-1 rounded text-xs hover:bg-accent transition-colors disabled:opacity-50">
+                <Button variant="ghost" key={alt.id} onClick={() => handleSelect(alt)} disabled={saving}
+                  className="w-full justify-start gap-1.5 px-2 py-1 h-auto text-xs">
                   <span className="font-mono font-medium shrink-0">{alt.tnvedCode}</span>
                   {alt.tnvedName && <span className="text-muted-foreground truncate">{alt.tnvedName}</span>}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -128,15 +128,12 @@ export function TnvedReviewPopover({ productId, clientId, tnvedCode, tnvedName, 
             <p className="text-xs text-muted-foreground text-center py-3">Введите минимум 2 символа</p>
           )}
           {allItems.map((item) => (
-            <button type="button" key={item.code} onClick={() => handleSelect(item)} disabled={saving}
-              className={cn(
-                "flex items-start gap-1.5 w-full text-left px-3 py-1.5 text-xs hover:bg-accent transition-colors border-b border-border/50 last:border-0",
-                saving && "opacity-50 cursor-not-allowed"
-              )}>
+            <Button variant="ghost" key={item.code} onClick={() => handleSelect(item)} disabled={saving}
+              className="w-full justify-start gap-1.5 px-3 py-1.5 h-auto text-xs border-b border-border/50 last:border-0 rounded-none">
               <span className="font-mono font-medium shrink-0">{item.code}</span>
               <span className="text-muted-foreground">{item.name}</span>
               {item.unit && <span className="text-muted-foreground shrink-0">({item.unit})</span>}
-            </button>
+            </Button>
           ))}
           {isFetching && allItems.length > 0 && (
             <p className="text-xs text-muted-foreground text-center py-2">Загрузка...</p>

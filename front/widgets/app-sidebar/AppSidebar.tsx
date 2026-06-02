@@ -27,6 +27,7 @@ import {
   SidebarMenuSubItem,
   SidebarSeparator,
   useSidebar,
+  Button,
 } from "@/shared/ui"
 import { ROUTES } from "@/shared/config"
 import { cn } from "@/shared/lib"
@@ -217,14 +218,14 @@ function UserFooter() {
 
           <div className="my-1 h-px bg-border mx-2" />
 
-          <button
-            type="button"
+          <Button
+            variant="ghost"
             onClick={handleLogout}
-            className={cn(MENU_ITEM_CLASS, "text-destructive hover:text-destructive")}
+            className="w-full justify-start gap-2.5 px-3 py-2 h-auto text-destructive hover:text-destructive hover:bg-sidebar-accent"
           >
             <LogOut strokeWidth={1.5} className="size-4 shrink-0" />
             Выйти
-          </button>
+          </Button>
         </m.div>
         )}
       </AnimatePresence>

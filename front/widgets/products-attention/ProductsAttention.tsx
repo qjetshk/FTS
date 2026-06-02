@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { m, AnimatePresence } from "framer-motion"
 import { ChevronDown } from "lucide-react"
+import { Button } from "@/shared/ui/Button"
 import { cn } from "@/shared/lib"
 import type { Product } from "@/entities/product"
 
@@ -22,10 +23,10 @@ export function ProductsAttention({ products, clientId }: Props) {
 
   return (
     <div className="rounded-xl border border-border overflow-hidden">
-      <button
-        type="button"
+      <Button
+        variant="ghost"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-surface hover:bg-surface-2 transition-colors"
+        className="w-full justify-between px-4 py-3 h-auto rounded-none bg-surface hover:bg-surface-2"
       >
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium">Требует внимания</span>
@@ -50,7 +51,7 @@ export function ProductsAttention({ products, clientId }: Props) {
         <m.div animate={{ rotate: open ? 0 : -90 }} transition={{ duration: 0.2 }}>
           <ChevronDown className="size-4 text-muted-foreground" />
         </m.div>
-      </button>
+      </Button>
 
       <AnimatePresence initial={false}>
         {open && (

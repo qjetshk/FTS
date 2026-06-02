@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { Search } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger, Input } from "@/shared/ui"
+import { Popover, PopoverContent, PopoverTrigger, Input, Button } from "@/shared/ui"
 import { useUpdateCountryMutation } from "@/entities/product"
 import { cn } from "@/shared/lib"
 
@@ -67,19 +67,18 @@ export function CountrySelect({ productId, clientId, countriesOfOrigin, currentC
             <p className="text-xs text-muted-foreground text-center py-3">Ничего не найдено</p>
           )}
           {filtered.map((country) => (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               key={country}
               onClick={() => handleSelect(country)}
               disabled={isLoading}
               className={cn(
-                "w-full text-left px-3 py-1.5 text-xs hover:bg-accent transition-colors border-b border-border/50 last:border-0",
-                currentCountry === country && "font-medium text-primary",
-                isLoading && "opacity-50 cursor-not-allowed"
+                "w-full justify-start px-3 py-1.5 h-auto text-xs rounded-none border-b border-border/50 last:border-0",
+                currentCountry === country && "font-medium text-primary"
               )}
             >
               {country}
-            </button>
+            </Button>
           ))}
         </div>
 

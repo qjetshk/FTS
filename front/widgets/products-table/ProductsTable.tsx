@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Group, Panel, Separator } from "react-resizable-panels"
 import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, Skeleton,
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, Skeleton, Button,
 } from "@/shared/ui"
 import { useGetProductsQuery, useGetProductsSnapshotQuery, isNeedsAttention, type Product } from "@/entities/product"
 import { cn } from "@/shared/lib"
@@ -211,9 +211,9 @@ export function ProductsTable({ clientId, className }: Props) {
         <div className="flex items-center justify-between text-xs text-muted-foreground shrink-0">
           <span>{goodItems.length} товаров</span>
           <div className="flex items-center gap-1.5">
-            <button type="button" onClick={() => setMainPage(p => Math.max(1, p - 1))} disabled={mainPage === 1} className="p-1 rounded hover:bg-accent disabled:opacity-40"><ChevronLeft className="size-3.5" /></button>
+            <Button variant="ghost" size="icon-xs" onClick={() => setMainPage(p => Math.max(1, p - 1))} disabled={mainPage === 1}><ChevronLeft className="size-3.5" /></Button>
             <span>{mainPage} / {totalGoodPages}</span>
-            <button type="button" onClick={() => setMainPage(p => Math.min(totalGoodPages, p + 1))} disabled={mainPage === totalGoodPages} className="p-1 rounded hover:bg-accent disabled:opacity-40"><ChevronRight className="size-3.5" /></button>
+            <Button variant="ghost" size="icon-xs" onClick={() => setMainPage(p => Math.min(totalGoodPages, p + 1))} disabled={mainPage === totalGoodPages}><ChevronRight className="size-3.5" /></Button>
           </div>
         </div>
       )}
