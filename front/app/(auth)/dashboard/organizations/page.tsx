@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -161,24 +162,31 @@ function ApiIntegrationSection({ orgId, currentApiKey, clientId, userId }: {
   )
 }
 
-// ─── Section 2: Org Details (address only, no declarant) ─────────────────────
+// ─── Section 2: Org Details ───────────────────────────────────────────────────
 
-function OrgDetailsSection({ org }: { org: ReturnType<typeof useGetFirstOrgQuery>["data"] }) {
-  if (!org) return null
+function OrgDisabledField({ label, value }: { label: string; value: string | null | undefined }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium">{label}</span>
+      <div className="h-9 px-3 flex items-center rounded-md border border-border bg-muted text-sm text-muted-foreground">{value || "—"}</div>
+    </div>
+  )
+}
 
+const addressSchema = z.object({
+  street: z.string().trim().optional(),
+  house: z.string().trim().optional(),
+  room: z.string().trim().optional(),
+  postalCode: z.string().trim().optional(),
+})
+type AddressValues = z.infer<typeof addressSchema>
+
+function OrgDetailsSection({ org }: { org: NonNullable<ReturnType<typeof useGetFirstOrgQuery>["data"]> }) {
   const isIp = org.fullOpf.toLowerCase().includes("индивидуальный предприниматель") ||
     org.fullOpf.toLowerCase().includes(" ип") ||
     org.fullOpf.startsWith("ИП")
 
   const [updateOrg, { isLoading }] = useUpdateOrganizationMutation()
-
-  const addressSchema = z.object({
-    street: z.string().trim().optional(),
-    house: z.string().trim().optional(),
-    room: z.string().trim().optional(),
-    postalCode: z.string().trim().optional(),
-  })
-  type AddressValues = z.infer<typeof addressSchema>
 
   const form = useForm<AddressValues>({
     resolver: zodResolver(addressSchema),
@@ -189,13 +197,6 @@ function OrgDetailsSection({ org }: { org: ReturnType<typeof useGetFirstOrgQuery
       postalCode: org.postalCode ?? "",
     },
   })
-
-  const DisabledField = ({ label, value }: { label: string; value: string | null | undefined }) => (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium">{label}</span>
-      <div className="h-9 px-3 flex items-center rounded-md border border-border bg-muted text-sm text-muted-foreground">{value || "—"}</div>
-    </div>
-  )
 
   const onSubmit = async (values: AddressValues) => {
     const street = isIp ? values.street : (org.street ?? undefined)
@@ -223,12 +224,12 @@ function OrgDetailsSection({ org }: { org: ReturnType<typeof useGetFirstOrgQuery
         <section className="flex flex-col gap-3">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Реквизиты</h3>
           <div className="grid grid-cols-2 gap-3">
-            <DisabledField label="Полное название" value={org.fullOrg} />
-            <DisabledField label="ОПФ" value={org.fullOpf} />
-            <DisabledField label="ИНН" value={org.inn} />
-            <DisabledField label="ОГРН" value={org.ogrn} />
-            {org.kpp && <DisabledField label="КПП" value={org.kpp} />}
-            <DisabledField label="ОКАТО" value={org.okato5} />
+            <OrgDisabledField label="Полное название" value={org.fullOrg} />
+            <OrgDisabledField label="ОПФ" value={org.fullOpf} />
+            <OrgDisabledField label="ИНН" value={org.inn} />
+            <OrgDisabledField label="ОГРН" value={org.ogrn} />
+            {org.kpp && <OrgDisabledField label="КПП" value={org.kpp} />}
+            <OrgDisabledField label="ОКАТО" value={org.okato5} />
           </div>
         </section>
 
@@ -236,9 +237,9 @@ function OrgDetailsSection({ org }: { org: ReturnType<typeof useGetFirstOrgQuery
         <section className="flex flex-col gap-3">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Адрес</h3>
           <div className="grid grid-cols-2 gap-3">
-            <DisabledField label="Страна" value={org.country} />
-            <DisabledField label="Регион" value={org.region} />
-            <DisabledField label="Город" value={org.city} />
+            <OrgDisabledField label="Страна" value={org.country} />
+            <OrgDisabledField label="Регион" value={org.region} />
+            <OrgDisabledField label="Город" value={org.city} />
             {isIp ? (
               <>
                 <FormField control={form.control} name="postalCode" render={({ field }) => (
@@ -256,10 +257,10 @@ function OrgDetailsSection({ org }: { org: ReturnType<typeof useGetFirstOrgQuery
               </>
             ) : (
               <>
-                <DisabledField label="Индекс" value={org.postalCode} />
-                <DisabledField label="Улица" value={org.street} />
-                <DisabledField label="Дом" value={org.house} />
-                <DisabledField label="Офис/кв." value={org.room} />
+                <OrgDisabledField label="Индекс" value={org.postalCode} />
+                <OrgDisabledField label="Улица" value={org.street} />
+                <OrgDisabledField label="Дом" value={org.house} />
+                <OrgDisabledField label="Офис/кв." value={org.room} />
               </>
             )}
           </div>
@@ -277,7 +278,7 @@ function OrgDetailsSection({ org }: { org: ReturnType<typeof useGetFirstOrgQuery
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function OrganizationsPage() {
+function OrganizationsPageContent() {
   const searchParams = useSearchParams()
   const orgId = searchParams?.get("orgId") ?? undefined
 
@@ -348,5 +349,17 @@ export default function OrganizationsPage() {
 
       </Accordion>
     </div>
+  )
+}
+
+export default function OrganizationsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <OrganizationsPageContent />
+    </Suspense>
   )
 }

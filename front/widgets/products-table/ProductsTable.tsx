@@ -23,6 +23,10 @@ type Props = {
   onCountrySelect?: (productId: number, country: string) => void
 }
 
+const EMPTY_PENDING_TNVED: Record<number, PendingTnved> = {}
+const EMPTY_PENDING_COUNTRY: Record<number, string> = {}
+const NOOP = () => {}
+
 const HEADS = ["", "Название", "Категория", "Страна-изготовитель", "Артикул", "SKU", "ТН ВЭД", "Ед."]
 const DEFAULT_SIZES = [4, 18, 13, 13, 11, 7, 28, 6]
 const MIN_SIZES =     [3,  8,   6,   6,   5,  3,  8,   3]
@@ -219,7 +223,7 @@ function TableBlock({ items, clientId, isLoading, variant, label, maxHeight, fle
   )
 }
 
-export function ProductsTable({ clientId, className, showClassificationProgress = false, pendingTnvedMap = {}, onTnvedSelect = () => {}, pendingCountryMap = {}, onCountrySelect = () => {} }: Props) {
+export function ProductsTable({ clientId, className, showClassificationProgress = false, pendingTnvedMap = EMPTY_PENDING_TNVED, onTnvedSelect = NOOP, pendingCountryMap = EMPTY_PENDING_COUNTRY, onCountrySelect = NOOP }: Props) {
   const [mainPage, setMainPage] = useState(1)
 
   const { data, isLoading } = useGetProductsQuery({ clientId, page: 1, limit: 100 })

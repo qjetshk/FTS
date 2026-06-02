@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Loader2, Save } from "lucide-react"
@@ -9,7 +9,7 @@ import { useGetFirstOrgQuery, useGetOrgByIdQuery } from "@/entities/organization
 import { useUpdateTnvedMutation, useUpdateCountryMutation } from "@/entities/product"
 import { ProductsTable, type PendingTnved } from "@/widgets/products-table/ProductsTable"
 
-export default function ProductsPage() {
+function ProductsPageContent() {
   const searchParams = useSearchParams()
   const orgId = searchParams?.get("orgId") ?? undefined
 
@@ -109,5 +109,17 @@ export default function ProductsPage() {
       )}
 
     </div>
+  )
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <ProductsPageContent />
+    </Suspense>
   )
 }

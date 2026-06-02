@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { cookies } from "next/headers"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/shared/ui"
 import { AppSidebar } from "@/widgets/app-sidebar"
@@ -14,7 +15,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4">
           <SidebarTrigger />
           <div className="h-4 w-px bg-border" />
-          <DashboardBreadcrumb />
+          <Suspense fallback={null}>
+            <DashboardBreadcrumb />
+          </Suspense>
         </header>
         <div className="flex flex-1 flex-col p-6">
           {children}

@@ -157,27 +157,27 @@ export function OrgForm({ org, onSaved }: Props) {
       const fullAddress = [postalCode, org.country, org.region, org.city, street, house, room]
         .filter(Boolean).join(", ")
 
-      await updateOrg({ id: org.id, fullAddress, country: org.country, region: org.region, city: org.city, street, house, room, postalCode }).unwrap()
-
-      await updateDeclarant({
-        id: org.declarant.id,
-        name: isIp ? org.declarant.name : (values.declarantName || null),
-        surname: isIp ? org.declarant.surname : (values.declarantSurname || null),
-        patronymic: isIp ? org.declarant.patronymic : (values.declarantPatronymic || null),
-        position: isIp ? "Индивидуальный предприниматель" : (values.declarantPosition || null),
-        email: values.declarantEmail || null,
-        phone: values.declarantPhone || null,
-      }).unwrap()
-
-      await createDocument({
-        declarantId: org.declarant.id,
-        typeCode: values.docTypeCode,
-        typeShort: values.docTypeShort,
-        series: values.docSeries || null,
-        number: values.docNumber,
-        issuedBy: values.docIssuedBy,
-        issuedAt: new Date(values.docIssuedAt).toISOString(),
-      }).unwrap()
+      await Promise.all([
+        updateOrg({ id: org.id, fullAddress, country: org.country, region: org.region, city: org.city, street, house, room, postalCode }).unwrap(),
+        updateDeclarant({
+          id: org.declarant.id,
+          name: isIp ? org.declarant.name : (values.declarantName || null),
+          surname: isIp ? org.declarant.surname : (values.declarantSurname || null),
+          patronymic: isIp ? org.declarant.patronymic : (values.declarantPatronymic || null),
+          position: isIp ? "Индивидуальный предприниматель" : (values.declarantPosition || null),
+          email: values.declarantEmail || null,
+          phone: values.declarantPhone || null,
+        }).unwrap(),
+        createDocument({
+          declarantId: org.declarant.id,
+          typeCode: values.docTypeCode,
+          typeShort: values.docTypeShort,
+          series: values.docSeries || null,
+          number: values.docNumber,
+          issuedBy: values.docIssuedBy,
+          issuedAt: new Date(values.docIssuedAt).toISOString(),
+        }).unwrap(),
+      ])
 
       toast.success("Данные сохранены")
       onSaved?.()
