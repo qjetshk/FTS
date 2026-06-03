@@ -23,6 +23,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   account: "Аккаунт",
   billing: "Биллинг",
   notifications: "Уведомления",
+  new: "Добавить организацию",
 }
 
 // Страницы где нужен выбор орги в бредкрамбе
