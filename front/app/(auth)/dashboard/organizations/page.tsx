@@ -32,7 +32,7 @@ function OrganizationsPageContent() {
   if (!org) return null
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl">
+    <div className="flex flex-col gap-6 max-w-3xl">
 
       <Card>
         <CardContent className="pt-5 pb-5 flex flex-col gap-1">

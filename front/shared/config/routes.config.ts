@@ -9,7 +9,7 @@ export const ROUTES = {
   organizations: "/dashboard/organizations",
   addOrg: "/dashboard/organizations/new",
   account: "/dashboard/account",
-  billing: "/dashboard/billing",
+  billing: "/dashboard/account#billing",
   notifications: "/dashboard/notifications",
   settings: "/dashboard/settings"
 } as const

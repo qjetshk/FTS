@@ -180,6 +180,25 @@ export class AuthService {
     return user;
   }
 
+  async updateProfile(userId: string, dto: { name: string }) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { name: dto.name },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        plan: true,
+        planStatus: true,
+        planExpiresAt: true,
+        createdAt: true,
+        avatarUrl: true,
+        isOnboardingComplete: true,
+      },
+    });
+    return user;
+  }
+
   async completeOnboarding(userId: string) {
     await this.prisma.user.update({
       where: { id: userId },

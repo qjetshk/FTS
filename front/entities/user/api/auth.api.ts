@@ -3,6 +3,8 @@ import type { AuthResponse, User } from "../model/user.type"
 import type { LoginFormValues } from "../model/login.schema"
 import type { RegisterFormValues } from "../model/register.schema"
 
+type UpdateProfileBody = { name: string }
+
 const authApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     login: build.mutation<AuthResponse, LoginFormValues>({
@@ -26,6 +28,10 @@ const authApi = baseApi.injectEndpoints({
       query: () => ({ url: "/auth/reset-onboarding", method: "POST" }),
       invalidatesTags: ["User"],
     }),
+    updateProfile: build.mutation<User, UpdateProfileBody>({
+      query: (body) => ({ url: "/auth/profile", method: "PATCH", body }),
+      invalidatesTags: ["User"],
+    }),
   }),
 })
 
@@ -36,4 +42,5 @@ export const {
   useMeQuery,
   useCompleteOnboardingMutation,
   useResetOnboardingMutation,
+  useUpdateProfileMutation,
 } = authApi
