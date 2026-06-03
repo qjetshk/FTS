@@ -13,12 +13,14 @@ import {
   Card, CardContent,
   Form, FormField, FormItem, FormLabel, FormControl, FormMessage,
   Button, Input,
+  FieldReadonly,
 } from "@/shared/ui"
 import {
   useGetFirstOrgQuery,
   useGetOrgByIdQuery,
   useValidateApiKeyQuery,
   useUpdateOrganizationMutation,
+  isIp,
 } from "@/entities/organization"
 import { OrgForm } from "@/widgets/org-form"
 
@@ -164,14 +166,6 @@ function ApiIntegrationSection({ orgId, currentApiKey, clientId, userId }: {
 
 // ─── Section 2: Org Details ───────────────────────────────────────────────────
 
-function OrgDisabledField({ label, value }: { label: string; value: string | null | undefined }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium">{label}</span>
-      <div className="h-9 px-3 flex items-center rounded-md border border-border bg-muted text-sm text-muted-foreground">{value || "—"}</div>
-    </div>
-  )
-}
 
 const addressSchema = z.object({
   street: z.string().trim().optional(),
@@ -182,9 +176,7 @@ const addressSchema = z.object({
 type AddressValues = z.infer<typeof addressSchema>
 
 function OrgDetailsSection({ org }: { org: NonNullable<ReturnType<typeof useGetFirstOrgQuery>["data"]> }) {
-  const isIp = org.fullOpf.toLowerCase().includes("индивидуальный предприниматель") ||
-    org.fullOpf.toLowerCase().includes(" ип") ||
-    org.fullOpf.startsWith("ИП")
+  const ip = isIp(org)
 
   const [updateOrg, { isLoading }] = useUpdateOrganizationMutation()
 
@@ -199,10 +191,10 @@ function OrgDetailsSection({ org }: { org: NonNullable<ReturnType<typeof useGetF
   })
 
   const onSubmit = async (values: AddressValues) => {
-    const street = isIp ? values.street : (org.street ?? undefined)
-    const house = isIp ? values.house : (org.house ?? undefined)
-    const room = isIp ? (values.room || undefined) : (org.room ?? undefined)
-    const postalCode = isIp ? values.postalCode : org.postalCode
+    const street = ip ? values.street : (org.street ?? undefined)
+    const house = ip ? values.house : (org.house ?? undefined)
+    const room = ip ? (values.room || undefined) : (org.room ?? undefined)
+    const postalCode = ip ? values.postalCode : org.postalCode
 
     const fullAddress = [postalCode, org.country, org.region, org.city, street, house, room]
       .filter(Boolean).join(", ")
@@ -224,12 +216,12 @@ function OrgDetailsSection({ org }: { org: NonNullable<ReturnType<typeof useGetF
         <section className="flex flex-col gap-3">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Реквизиты</h3>
           <div className="grid grid-cols-2 gap-3">
-            <OrgDisabledField label="Полное название" value={org.fullOrg} />
-            <OrgDisabledField label="ОПФ" value={org.fullOpf} />
-            <OrgDisabledField label="ИНН" value={org.inn} />
-            <OrgDisabledField label="ОГРН" value={org.ogrn} />
-            {org.kpp && <OrgDisabledField label="КПП" value={org.kpp} />}
-            <OrgDisabledField label="ОКАТО" value={org.okato5} />
+            <FieldReadonly label="Полное название" value={org.fullOrg} />
+            <FieldReadonly label="ОПФ" value={org.fullOpf} />
+            <FieldReadonly label="ИНН" value={org.inn} />
+            <FieldReadonly label="ОГРН" value={org.ogrn} />
+            {org.kpp && <FieldReadonly label="КПП" value={org.kpp} />}
+            <FieldReadonly label="ОКАТО" value={org.okato5} />
           </div>
         </section>
 
@@ -237,10 +229,10 @@ function OrgDetailsSection({ org }: { org: NonNullable<ReturnType<typeof useGetF
         <section className="flex flex-col gap-3">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Адрес</h3>
           <div className="grid grid-cols-2 gap-3">
-            <OrgDisabledField label="Страна" value={org.country} />
-            <OrgDisabledField label="Регион" value={org.region} />
-            <OrgDisabledField label="Город" value={org.city} />
-            {isIp ? (
+            <FieldReadonly label="Страна" value={org.country} />
+            <FieldReadonly label="Регион" value={org.region} />
+            <FieldReadonly label="Город" value={org.city} />
+            {ip ? (
               <>
                 <FormField control={form.control} name="postalCode" render={({ field }) => (
                   <FormItem><FormLabel>Индекс</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
@@ -257,16 +249,16 @@ function OrgDetailsSection({ org }: { org: NonNullable<ReturnType<typeof useGetF
               </>
             ) : (
               <>
-                <OrgDisabledField label="Индекс" value={org.postalCode} />
-                <OrgDisabledField label="Улица" value={org.street} />
-                <OrgDisabledField label="Дом" value={org.house} />
-                <OrgDisabledField label="Офис/кв." value={org.room} />
+                <FieldReadonly label="Индекс" value={org.postalCode} />
+                <FieldReadonly label="Улица" value={org.street} />
+                <FieldReadonly label="Дом" value={org.house} />
+                <FieldReadonly label="Офис/кв." value={org.room} />
               </>
             )}
           </div>
         </section>
 
-        {isIp && (
+        {ip && (
           <Button type="submit" disabled={!form.formState.isDirty || isLoading} className="w-full">
             {isLoading ? "Сохраняем..." : "Сохранить адрес"}
           </Button>

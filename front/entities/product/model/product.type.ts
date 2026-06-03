@@ -47,3 +47,9 @@ export type GetProductsResponse = {
   page: number
   limit: number
 }
+
+export type PendingTnved = {
+  tnvedCode: string
+  tnvedName: string | null
+  tnvedUnit: string | null
+}

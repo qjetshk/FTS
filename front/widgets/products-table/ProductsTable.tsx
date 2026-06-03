@@ -5,13 +5,12 @@ import { Group, Panel, Separator } from "react-resizable-panels"
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, Skeleton, Button,
 } from "@/shared/ui"
-import { useGetProductsQuery, useGetProductsSnapshotQuery, isNeedsAttention, type Product } from "@/entities/product"
+import { useGetProductsQuery, useGetProductsSnapshotQuery, isNeedsAttention, type Product, type PendingTnved } from "@/entities/product"
 import { cn } from "@/shared/lib"
-import { CountrySelect } from "@/features/edit-product-country/ui/CountrySelect"
-import { TnvedReviewPopover } from "@/features/edit-tnved/ui/TnvedReviewPopover"
+import { CountrySelect } from "@/features/edit-product-country"
+import { TnvedReviewPopover } from "@/features/edit-tnved"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
-export type PendingTnved = { tnvedCode: string; tnvedName: string | null; tnvedUnit: string | null }
 
 type Props = {
   clientId: number

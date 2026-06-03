@@ -4,12 +4,12 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, Button, Input } from "@/shared/ui"
-import { useCompanyInfoMutation, useClassifyMutation } from "@/entities/organization"
+import { useCompanyInfoMutation, useClassifyMutation, type Organization } from "@/entities/organization"
 import { useMeQuery } from "@/entities/user"
 import { apiKeysSchema, type ApiKeysFormValues } from "../model/api-keys.schema"
 
 type Props = {
-  onComplete: (orgData: any, apiKey: string, clientId: string) => void
+  onComplete: (orgData: Organization, apiKey: string, clientId: string) => void
 }
 
 export function ApiKeysStep({ onComplete }: Props) {

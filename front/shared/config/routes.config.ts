@@ -7,6 +7,7 @@ export const ROUTES = {
   products: "/dashboard/products",
   statforms: "/dashboard/statforms",
   organizations: "/dashboard/organizations",
+  addOrg: "/dashboard/organizations/new",
   account: "/dashboard/account",
   billing: "/dashboard/billing",
   notifications: "/dashboard/notifications",

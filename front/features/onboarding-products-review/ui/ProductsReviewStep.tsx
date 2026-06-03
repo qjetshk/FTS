@@ -9,9 +9,10 @@ import {
   useVerifyAllTnvedMutation,
   useUpdateCountryMutation,
   isNeedsAttention,
+  type PendingTnved,
 } from "@/entities/product"
 import { useCompleteOnboardingMutation } from "@/entities/user"
-import { ProductsTable, type PendingTnved } from "@/widgets/products-table/ProductsTable"
+import { ProductsTable } from "@/widgets/products-table"
 
 type Props = {
   clientId: number

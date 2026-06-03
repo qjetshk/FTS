@@ -11,12 +11,14 @@ import {
   Button, Input,
   Popover, PopoverContent, PopoverTrigger,
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+  FieldReadonly,
 } from "@/shared/ui"
 import { cn } from "@/shared/lib"
 import {
   useUpdateDeclarantMutation,
   useCreateDocumentMutation,
   DOCUMENT_TYPES,
+  isIp,
   type Organization,
 } from "@/entities/organization"
 import { orgFormSchema, type OrgFormValues } from "./model/org-form.schema"
@@ -26,16 +28,6 @@ type Props = {
   onSaved?: () => void
 }
 
-function DisabledField({ label, value }: { label: string; value: string | null | undefined }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium text-foreground">{label}</span>
-      <div className="h-9 px-3 flex items-center rounded-md border border-border bg-muted text-sm text-muted-foreground">
-        {value || "—"}
-      </div>
-    </div>
-  )
-}
 
 type DocTypeSelectProps = {
   field: { value: string; onChange: (...event: unknown[]) => void }
@@ -98,9 +90,7 @@ function DocTypeSelect({ field, fieldState, onValueChange }: DocTypeSelectProps)
 }
 
 export function OrgForm({ org, onSaved }: Props) {
-  const isIp = org.fullOpf.toLowerCase().includes("индивидуальный предприниматель") ||
-    org.fullOpf.toLowerCase().includes(" ип") ||
-    org.fullOpf.startsWith("ИП")
+  const ip = isIp(org)
 
   const doc = org.declarant?.document
   const hasDoc = !!doc
@@ -139,10 +129,10 @@ export function OrgForm({ org, onSaved }: Props) {
       await Promise.all([
         updateDeclarant({
           id: org.declarant.id,
-          name: isIp ? org.declarant.name : (values.declarantName || null),
-          surname: isIp ? org.declarant.surname : (values.declarantSurname || null),
-          patronymic: isIp ? org.declarant.patronymic : (values.declarantPatronymic || null),
-          position: isIp ? "Индивидуальный предприниматель" : (values.declarantPosition || null),
+          name: ip ? org.declarant.name : (values.declarantName || null),
+          surname: ip ? org.declarant.surname : (values.declarantSurname || null),
+          patronymic: ip ? org.declarant.patronymic : (values.declarantPatronymic || null),
+          position: ip ? "Индивидуальный предприниматель" : (values.declarantPosition || null),
           email: values.declarantEmail || null,
           phone: values.declarantPhone || null,
         }).unwrap(),
@@ -172,11 +162,11 @@ export function OrgForm({ org, onSaved }: Props) {
         <section className="flex flex-col gap-3">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Декларант</h3>
           <div className="grid grid-cols-2 gap-3">
-            {isIp ? (
+            {ip ? (
               <>
-                <DisabledField label="Имя" value={org.declarant?.name} />
-                <DisabledField label="Фамилия" value={org.declarant?.surname} />
-                <DisabledField label="Отчество" value={org.declarant?.patronymic} />
+                <FieldReadonly label="Имя" value={org.declarant?.name} />
+                <FieldReadonly label="Фамилия" value={org.declarant?.surname} />
+                <FieldReadonly label="Отчество" value={org.declarant?.patronymic} />
               </>
             ) : (
               (["declarantSurname", "declarantName", "declarantPatronymic"] as const).map((f) => (
@@ -189,8 +179,8 @@ export function OrgForm({ org, onSaved }: Props) {
                 )} />
               ))
             )}
-            {isIp
-              ? <DisabledField label="Должность" value="Индивидуальный предприниматель" />
+            {ip
+              ? <FieldReadonly label="Должность" value="Индивидуальный предприниматель" />
               : (
                 <FormField control={form.control} name="declarantPosition" render={({ field }) => (
                   <FormItem><FormLabel>Должность</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
