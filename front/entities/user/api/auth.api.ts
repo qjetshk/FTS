@@ -5,6 +5,9 @@ import type { RegisterFormValues } from "../model/register.schema"
 
 type UpdateProfileBody = { name: string }
 
+export type Session = { id: string; createdAt: string; expiresAt: string; deviceName: string }
+export type UserStats = { organizations: number; products: number; statforms: number }
+
 const authApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     login: build.mutation<AuthResponse, LoginFormValues>({
@@ -32,6 +35,18 @@ const authApi = baseApi.injectEndpoints({
       query: (body) => ({ url: "/auth/profile", method: "PATCH", body }),
       invalidatesTags: ["User"],
     }),
+    getSessions: build.query<Session[], void>({
+      query: () => "/auth/sessions",
+      providesTags: ["Sessions"],
+    }),
+    revokeOtherSessions: build.mutation<{ message: string }, void>({
+      query: () => ({ url: "/auth/sessions/revoke-others", method: "POST" }),
+      invalidatesTags: ["Sessions"],
+    }),
+    getStats: build.query<UserStats, void>({
+      query: () => "/auth/stats",
+      providesTags: ["Stats"],
+    }),
   }),
 })
 
@@ -43,4 +58,7 @@ export const {
   useCompleteOnboardingMutation,
   useResetOnboardingMutation,
   useUpdateProfileMutation,
+  useGetSessionsQuery,
+  useRevokeOtherSessionsMutation,
+  useGetStatsQuery,
 } = authApi

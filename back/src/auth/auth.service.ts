@@ -24,7 +24,7 @@ export class AuthService {
 
   // ─── Register ────────────────────────────────────────────────────────────────
 
-  async register(dto: RegisterDto, res: Response) {
+  async register(dto: RegisterDto, res: Response, userAgent?: string, ipAddress?: string) {
     const exists = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -60,12 +60,12 @@ export class AuthService {
       },
     });
 
-    return this.issueTokens(user.id, res);
+    return this.issueTokens(user.id, res, userAgent, ipAddress);
   }
 
   // ─── Login ────────────────────────────────────────────────────────────────────
 
-  async login(dto: LoginDto, res: Response) {
+  async login(dto: LoginDto, res: Response, userAgent?: string, ipAddress?: string) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -79,7 +79,7 @@ export class AuthService {
       throw new UnauthorizedException('Неверный email или пароль');
     }
 
-    return this.issueTokens(user.id, res);
+    return this.issueTokens(user.id, res, userAgent, ipAddress);
   }
 
   // ─── Logout ───────────────────────────────────────────────────────────────────
@@ -98,19 +98,78 @@ export class AuthService {
 
   // ─── Refresh ──────────────────────────────────────────────────────────────────
 
-  async refresh(userId: string, oldRefreshToken: string, res: Response) {
-    // Отзываем старый токен (rotation)
-    await this.prisma.refreshToken.updateMany({
-      where: { userId, token: oldRefreshToken },
-      data: { isRevoked: true },
+  async refresh(
+    userId: string,
+    oldRefreshToken: string,
+    res: Response,
+    userAgent?: string,
+    ipAddress?: string,
+  ) {
+    // Rotation: update token in-place so session count stays stable
+    const refreshExpire =
+      this.config.getOrThrow<StringValue>('JWT_REFRESH_EXPIRE');
+    const payload: JwtPayload = { id: userId };
+    const newRefreshToken = this.jwt.sign(payload, {
+      secret: this.config.getOrThrow<string>('JWT_REFRESH_SECRET'),
+      expiresIn: refreshExpire,
+    });
+    const expiresAt = new Date(Date.now() + convertExpireTime(refreshExpire));
+
+    await this.prisma.refreshToken.update({
+      where: { token: oldRefreshToken },
+      data: {
+        token: newRefreshToken,
+        expiresAt,
+        ...(userAgent && { userAgent }),
+        ...(ipAddress && { ipAddress }),
+      },
     });
 
-    return this.issueTokens(userId, res);
+    const accessExpire =
+      this.config.getOrThrow<StringValue>('JWT_ACCESS_EXPIRE');
+    const accessToken = this.jwt.sign(payload, {
+      secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
+      expiresIn: accessExpire,
+    });
+
+    res.cookie('refresh_token', newRefreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: convertExpireTime(refreshExpire),
+      path: '/',
+    });
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true, email: true, name: true, plan: true, planStatus: true,
+        planExpiresAt: true, createdAt: true, avatarUrl: true, isOnboardingComplete: true,
+      },
+    });
+
+    return { accessToken, user };
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-  private async issueTokens(userId: string, res: Response) {
+  private parseDevice(userAgent: string | undefined): string {
+    if (!userAgent) return 'Неизвестное устройство';
+    if (/mobile|android|iphone|ipad/i.test(userAgent)) return 'Мобильный браузер';
+    if (/edg\//i.test(userAgent)) return 'Microsoft Edge';
+    if (/opr\//i.test(userAgent)) return 'Opera';
+    if (/firefox/i.test(userAgent)) return 'Firefox';
+    if (/chrome/i.test(userAgent)) return 'Chrome';
+    if (/safari/i.test(userAgent)) return 'Safari';
+    return 'Браузер';
+  }
+
+  private async issueTokens(
+    userId: string,
+    res: Response,
+    userAgent?: string,
+    ipAddress?: string,
+  ) {
     const payload: JwtPayload = { id: userId };
 
     const accessExpire =
@@ -129,9 +188,24 @@ export class AuthService {
     });
 
     const expiresAt = new Date(Date.now() + convertExpireTime(refreshExpire));
-    await this.prisma.refreshToken.create({
-      data: { token: refreshToken, userId, expiresAt },
-    });
+
+    // Upsert by (userId + userAgent): one session per browser/device
+    const existing = userAgent
+      ? await this.prisma.refreshToken.findFirst({
+          where: { userId, userAgent, isRevoked: false },
+        })
+      : null;
+
+    if (existing) {
+      await this.prisma.refreshToken.update({
+        where: { id: existing.id },
+        data: { token: refreshToken, expiresAt, isRevoked: false },
+      });
+    } else {
+      await this.prisma.refreshToken.create({
+        data: { token: refreshToken, userId, expiresAt, userAgent, ipAddress },
+      });
+    }
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
@@ -213,5 +287,37 @@ export class AuthService {
       data: { isOnboardingComplete: false },
     });
     return { message: 'Онбординг сброшен' };
+  }
+
+  async getSessions(userId: string) {
+    const now = new Date();
+    const tokens = await this.prisma.refreshToken.findMany({
+      where: { userId, isRevoked: false, expiresAt: { gt: now } },
+      select: { id: true, createdAt: true, expiresAt: true, userAgent: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return tokens.map((t) => ({
+      id: t.id,
+      createdAt: t.createdAt,
+      expiresAt: t.expiresAt,
+      deviceName: this.parseDevice(t.userAgent ?? undefined),
+    }));
+  }
+
+  async revokeOtherSessions(userId: string, currentToken: string) {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, token: { not: currentToken }, isRevoked: false },
+      data: { isRevoked: true },
+    });
+    return { message: 'Другие сессии завершены' };
+  }
+
+  async getStats(userId: string) {
+    const [organizations, products, statforms] = await Promise.all([
+      this.prisma.organization.count({ where: { userId } }),
+      this.prisma.product.count({ where: { organization: { userId } } }),
+      this.prisma.statFormRun.count({ where: { organization: { userId } } }),
+    ]);
+    return { organizations, products, statforms };
   }
 }

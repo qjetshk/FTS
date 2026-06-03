@@ -9,5 +9,10 @@ export {
   useCompleteOnboardingMutation,
   useResetOnboardingMutation,
   useUpdateProfileMutation,
+  useGetSessionsQuery,
+  useRevokeOtherSessionsMutation,
+  useGetStatsQuery,
+  type Session,
+  type UserStats,
 } from "./api/auth.api"
 export { useUser } from "./lib/use-user.lib"

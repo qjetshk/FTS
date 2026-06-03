@@ -48,8 +48,10 @@ model RefreshToken {
   token     String   @unique
   expiresAt DateTime @map("expires_at")
 
-  // для инвалидации всех сессий разом
   isRevoked Boolean @default(false) @map("is_revoked")
+
+  userAgent String? @map("user_agent")
+  ipAddress String? @map("ip_address")
 
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

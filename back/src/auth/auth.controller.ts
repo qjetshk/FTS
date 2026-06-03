@@ -27,18 +27,20 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   async register(
     @Body() dto: RegisterDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.register(dto, res);
+    return this.authService.register(dto, res, req.headers['user-agent'], req.ip);
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
     @Body() dto: LoginDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.login(dto, res);
+    return this.authService.login(dto, res, req.headers['user-agent'], req.ip);
   }
 
   @Post('logout')
@@ -63,7 +65,7 @@ export class AuthController {
       userId: string;
       refreshToken: string;
     };
-    return this.authService.refresh(userId, refreshToken, res);
+    return this.authService.refresh(userId, refreshToken, res, req.headers['user-agent'], req.ip);
   }
 
   @Get('@me')
@@ -95,5 +97,30 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async resetOnboarding(@CurrentUser() user: JwtPayload) {
     return this.authService.resetOnboarding(user.id);
+  }
+
+  @Get('sessions')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async getSessions(@CurrentUser() user: JwtPayload) {
+    return this.authService.getSessions(user.id);
+  }
+
+  @Post('sessions/revoke-others')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtRefreshGuard)
+  async revokeOtherSessions(@Req() req: Request) {
+    const { userId, refreshToken } = req['user'] as {
+      userId: string;
+      refreshToken: string;
+    };
+    return this.authService.revokeOtherSessions(userId, refreshToken);
+  }
+
+  @Get('stats')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async getStats(@CurrentUser() user: JwtPayload) {
+    return this.authService.getStats(user.id);
   }
 }

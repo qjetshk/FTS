@@ -5,6 +5,8 @@ import { CreditCard } from "lucide-react"
 import { useMeQuery } from "@/entities/user"
 import { EditProfileForm } from "@/features/edit-profile"
 import { ResetPasswordButton } from "@/features/reset-password"
+import { SessionsList } from "@/features/manage-sessions"
+import { NotificationSettings } from "@/features/notification-settings"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Skeleton } from "@/shared/ui"
 
 const PLAN_LABEL: Record<string, string> = {
@@ -127,6 +129,27 @@ export default function AccountPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* Сессии + Уведомления */}
+      <div className="grid grid-cols-[1fr_320px] gap-6">
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle className="text-base">Активные сессии</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1">
+            <SessionsList />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Уведомления</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <NotificationSettings />
+          </CardContent>
+        </Card>
       </div>
 
       {/* Биллинг */}
