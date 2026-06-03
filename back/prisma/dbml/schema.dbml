@@ -29,6 +29,9 @@ Table refresh_tokens {
   token String [unique, not null]
   expiresAt DateTime [not null]
   isRevoked Boolean [not null, default: false]
+  userAgent String
+  ipAddress String
+  accessJti String
   userId String [not null]
   user users [not null]
   createdAt DateTime [default: `now()`, not null]

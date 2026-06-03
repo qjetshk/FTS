@@ -17,7 +17,7 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold text-foreground">Дашборд</h1>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {STATS.map(({ key, label, icon: Icon }) => (
           <Card key={key}>
             <CardContent className="flex items-center gap-4 pt-5 pb-5">

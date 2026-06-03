@@ -7,7 +7,9 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
 import * as argon2 from 'argon2';
+import { randomUUID } from 'crypto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { RedisService } from 'src/redis/redis.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtPayload, StringValue } from './interfaces/jwt.interface';
@@ -20,6 +22,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
+    private redis: RedisService,
   ) {}
 
   // ─── Register ────────────────────────────────────────────────────────────────
@@ -108,7 +111,8 @@ export class AuthService {
     // Rotation: update token in-place so session count stays stable
     const refreshExpire =
       this.config.getOrThrow<StringValue>('JWT_REFRESH_EXPIRE');
-    const payload: JwtPayload = { id: userId };
+    const jti = randomUUID();
+    const payload: JwtPayload = { id: userId, jti };
     const newRefreshToken = this.jwt.sign(payload, {
       secret: this.config.getOrThrow<string>('JWT_REFRESH_SECRET'),
       expiresIn: refreshExpire,
@@ -120,6 +124,7 @@ export class AuthService {
       data: {
         token: newRefreshToken,
         expiresAt,
+        accessJti: jti,
         ...(userAgent && { userAgent }),
         ...(ipAddress && { ipAddress }),
       },
@@ -170,7 +175,10 @@ export class AuthService {
     userAgent?: string,
     ipAddress?: string,
   ) {
-    const payload: JwtPayload = { id: userId };
+    // jti — уникальный ID этого конкретного access token.
+    // Храним его в RefreshToken, чтобы при revoke знать что именно заблокировать в Redis.
+    const jti = randomUUID();
+    const payload: JwtPayload = { id: userId, jti };
 
     const accessExpire =
       this.config.getOrThrow<StringValue>('JWT_ACCESS_EXPIRE');
@@ -199,11 +207,11 @@ export class AuthService {
     if (existing) {
       await this.prisma.refreshToken.update({
         where: { id: existing.id },
-        data: { token: refreshToken, expiresAt, isRevoked: false },
+        data: { token: refreshToken, expiresAt, isRevoked: false, accessJti: jti },
       });
     } else {
       await this.prisma.refreshToken.create({
-        data: { token: refreshToken, userId, expiresAt, userAgent, ipAddress },
+        data: { token: refreshToken, userId, expiresAt, userAgent, ipAddress, accessJti: jti },
       });
     }
 
@@ -289,11 +297,11 @@ export class AuthService {
     return { message: 'Онбординг сброшен' };
   }
 
-  async getSessions(userId: string) {
+  async getSessions(userId: string, currentToken: string) {
     const now = new Date();
     const tokens = await this.prisma.refreshToken.findMany({
       where: { userId, isRevoked: false, expiresAt: { gt: now } },
-      select: { id: true, createdAt: true, expiresAt: true, userAgent: true },
+      select: { id: true, createdAt: true, expiresAt: true, userAgent: true, token: true },
       orderBy: { createdAt: 'desc' },
     });
     return tokens.map((t) => ({
@@ -301,14 +309,34 @@ export class AuthService {
       createdAt: t.createdAt,
       expiresAt: t.expiresAt,
       deviceName: this.parseDevice(t.userAgent ?? undefined),
+      isCurrent: t.token === currentToken,
     }));
   }
 
   async revokeOtherSessions(userId: string, currentToken: string) {
+    // Берём jti всех других сессий до того как их отзовём
+    const accessExpire = this.config.getOrThrow<StringValue>('JWT_ACCESS_EXPIRE');
+    const ttl = Math.ceil(convertExpireTime(accessExpire) / 1000);
+
+    const others = await this.prisma.refreshToken.findMany({
+      where: { userId, token: { not: currentToken }, isRevoked: false },
+      select: { accessJti: true },
+    });
+
+    // Помечаем в БД как отозванные
     await this.prisma.refreshToken.updateMany({
       where: { userId, token: { not: currentToken }, isRevoked: false },
       data: { isRevoked: true },
     });
+
+    // Кладём каждый jti в Redis blacklist на время жизни access token.
+    // После этого guard отклонит запросы из других браузеров немедленно.
+    await Promise.all(
+      others
+        .filter((t) => t.accessJti)
+        .map((t) => this.redis.blacklist(t.accessJti!, ttl)),
+    );
+
     return { message: 'Другие сессии завершены' };
   }
 

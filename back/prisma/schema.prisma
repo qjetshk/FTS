@@ -52,6 +52,7 @@ model RefreshToken {
 
   userAgent String? @map("user_agent")
   ipAddress String? @map("ip_address")
+  accessJti String? @map("access_jti") // jti последнего выпущенного access token
 
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -102,8 +102,9 @@ export class AuthController {
   @Get('sessions')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async getSessions(@CurrentUser() user: JwtPayload) {
-    return this.authService.getSessions(user.id);
+  async getSessions(@CurrentUser() user: JwtPayload, @Req() req: Request) {
+    const currentToken = (req as any).cookies?.['refresh_token'] ?? '';
+    return this.authService.getSessions(user.id, currentToken);
   }
 
   @Post('sessions/revoke-others')

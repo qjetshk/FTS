@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bullmq';
 import { PrismaModule } from './prisma/prisma.module';
+import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
 import { OrganizationModule } from './organization/organization.module';
 import { ProductModule } from './product/product.module';
@@ -27,6 +28,7 @@ import { DEFAULT_JOB_OPTIONS } from './queue/queue.constants';
         defaultJobOptions: DEFAULT_JOB_OPTIONS,
       }),
     }),
+    RedisModule,
     PrismaModule,
     AuthModule,
     OrganizationModule,

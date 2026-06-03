@@ -36,7 +36,7 @@ export default function AccountPage() {
     return (
       <div className="flex flex-col gap-6 max-w-4xl">
         <Skeleton className="h-8 w-40" />
-        <div className="grid grid-cols-[1fr_320px] gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
           <Skeleton className="h-64 w-full" />
           <div className="flex flex-col gap-6">
             <Skeleton className="h-28 w-full" />
@@ -54,7 +54,7 @@ export default function AccountPage() {
     <div className="flex flex-col gap-6 max-w-4xl">
       <h1 className="text-xl font-semibold text-foreground">Аккаунт</h1>
 
-      <div className="grid grid-cols-[1fr_320px] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
         {/* Профиль — левая колонка, растягивается под высоту правой */}
         <Card className="flex flex-col">
           <CardHeader>
@@ -132,7 +132,7 @@ export default function AccountPage() {
       </div>
 
       {/* Сессии + Уведомления */}
-      <div className="grid grid-cols-[1fr_320px] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
         <Card className="flex flex-col">
           <CardHeader>
             <CardTitle className="text-base">Активные сессии</CardTitle>

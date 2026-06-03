@@ -5,7 +5,7 @@ import type { RegisterFormValues } from "../model/register.schema"
 
 type UpdateProfileBody = { name: string }
 
-export type Session = { id: string; createdAt: string; expiresAt: string; deviceName: string }
+export type Session = { id: string; createdAt: string; expiresAt: string; deviceName: string; isCurrent: boolean }
 export type UserStats = { organizations: number; products: number; statforms: number }
 
 const authApi = baseApi.injectEndpoints({
