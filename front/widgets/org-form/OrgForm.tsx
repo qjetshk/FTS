@@ -14,7 +14,6 @@ import {
 } from "@/shared/ui"
 import { cn } from "@/shared/lib"
 import {
-  useUpdateOrganizationMutation,
   useUpdateDeclarantMutation,
   useCreateDocumentMutation,
   DOCUMENT_TYPES,
@@ -106,19 +105,14 @@ export function OrgForm({ org, onSaved }: Props) {
   const doc = org.declarant?.document
   const hasDoc = !!doc
 
-  const [updateOrg, { isLoading: orgLoading }] = useUpdateOrganizationMutation()
   const [updateDeclarant, { isLoading: declarantLoading }] = useUpdateDeclarantMutation()
   const [createDocument, { isLoading: docLoading }] = useCreateDocumentMutation()
 
-  const isLoading = orgLoading || declarantLoading || docLoading
+  const isLoading = declarantLoading || docLoading
 
   const form = useForm<OrgFormValues>({
     resolver: zodResolver(orgFormSchema),
     defaultValues: {
-      street: org.street ?? "",
-      house: org.house ?? "",
-      room: org.room ?? "",
-      postalCode: org.postalCode ?? "",
       declarantName: org.declarant?.name ?? "",
       declarantSurname: org.declarant?.surname ?? "",
       declarantPatronymic: org.declarant?.patronymic ?? "",
@@ -141,24 +135,8 @@ export function OrgForm({ org, onSaved }: Props) {
       toast.error("Не найден декларант")
       return
     }
-    if (isIp) {
-      let hasError = false
-      if (!values.street?.trim()) { form.setError("street", { message: "Введите улицу" }); hasError = true }
-      if (!values.house?.trim()) { form.setError("house", { message: "Введите дом" }); hasError = true }
-      if (!values.postalCode?.trim()) { form.setError("postalCode", { message: "Введите индекс" }); hasError = true }
-      if (hasError) return
-    }
     try {
-      const street = isIp ? values.street : (org.street ?? undefined)
-      const house = isIp ? values.house : (org.house ?? undefined)
-      const room = isIp ? (values.room || undefined) : (org.room ?? undefined)
-      const postalCode = isIp ? values.postalCode : org.postalCode
-
-      const fullAddress = [postalCode, org.country, org.region, org.city, street, house, room]
-        .filter(Boolean).join(", ")
-
       await Promise.all([
-        updateOrg({ id: org.id, fullAddress, country: org.country, region: org.region, city: org.city, street, house, room, postalCode }).unwrap(),
         updateDeclarant({
           id: org.declarant.id,
           name: isIp ? org.declarant.name : (values.declarantName || null),
@@ -189,39 +167,6 @@ export function OrgForm({ org, onSaved }: Props) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
-
-        {/* Адрес */}
-        <section className="flex flex-col gap-3">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Адрес</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <DisabledField label="Страна" value={org.country} />
-            <DisabledField label="Регион" value={org.region} />
-            <DisabledField label="Город" value={org.city} />
-            {isIp ? (
-              <>
-                <FormField control={form.control} name="postalCode" render={({ field }) => (
-                  <FormItem><FormLabel>Индекс</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                {(["street", "house", "room"] as const).map((f) => (
-                  <FormField key={f} control={form.control} name={f} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{{ street: "Улица", house: "Дом", room: "Офис/кв." }[f]}</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                ))}
-              </>
-            ) : (
-              <>
-                <DisabledField label="Индекс" value={org.postalCode} />
-                <DisabledField label="Улица" value={org.street} />
-                <DisabledField label="Дом" value={org.house} />
-                <DisabledField label="Офис/кв." value={org.room} />
-              </>
-            )}
-          </div>
-        </section>
 
         {/* Декларант */}
         <section className="flex flex-col gap-3">

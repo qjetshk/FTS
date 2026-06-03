@@ -4,11 +4,6 @@ const str = (msg: string) => z.string().trim().min(1, msg)
 const strOpt = () => z.string().trim().optional()
 
 export const orgFormSchema = z.object({
-  street: strOpt(),
-  house: strOpt(),
-  room: strOpt(),
-  postalCode: strOpt(),
-
   declarantName: strOpt(),
   declarantSurname: strOpt(),
   declarantPatronymic: strOpt(),
