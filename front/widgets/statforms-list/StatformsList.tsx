@@ -2,13 +2,11 @@
 
 import { FileSpreadsheet } from "lucide-react"
 import { Accordion, Skeleton } from "@/shared/ui"
-import { MOCK_RUNS } from "@/entities/statform"
+import { useGetStatformRunsQuery } from "@/entities/statform"
 import { StatFormRunItem } from "./StatFormRunItem"
 
 export function StatformsList() {
-  // TODO: заменить на useGetStatformRunsQuery() при подключении реального API
-  const data = MOCK_RUNS
-  const isLoading = false
+  const { data, isLoading } = useGetStatformRunsQuery()
 
   if (isLoading) {
     return (

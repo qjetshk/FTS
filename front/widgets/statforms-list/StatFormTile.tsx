@@ -10,7 +10,7 @@ import { downloadStatform } from "@/features/download-statform"
 import { Badge } from "@/shared/ui"
 import type { StatForm } from "@/entities/statform"
 
-export function StatFormTile({ file }: { file: StatForm }) {
+export function StatFormTile({ file, period }: { file: StatForm; period: string }) {
   const [hover, setHover] = useState(false)
   const [busy, setBusy] = useState(false)
   const ready = file.status === "READY"
@@ -20,7 +20,8 @@ export function StatFormTile({ file }: { file: StatForm }) {
     if (!ready || busy) return
     setBusy(true)
     try {
-      await downloadStatform(file.id, `${file.country}_statform.xml`)
+      const [y, m] = period.split("-")
+      await downloadStatform(file.id, `${file.country}_statform_${m}-${y.slice(2)}.xml`)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Ошибка скачивания")
     } finally {
@@ -84,7 +85,7 @@ export function StatFormTile({ file }: { file: StatForm }) {
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
             className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none"
           >
-            <Download className="size-10 text-[var(--success-fg)]" />
+            <Download className="size-10 text-(--success-fg)" />
           </motion.div>
         )}
         {busy && (
@@ -94,7 +95,7 @@ export function StatFormTile({ file }: { file: StatForm }) {
             exit={{ opacity: 0 }}
             className="absolute inset-0 flex items-center justify-center pointer-events-none"
           >
-            <Loader2 className="size-10 text-[var(--success-fg)] animate-spin" />
+            <Loader2 className="size-10 text-(--success-fg) animate-spin" />
           </motion.div>
         )}
       </AnimatePresence>

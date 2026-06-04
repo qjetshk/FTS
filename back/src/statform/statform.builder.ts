@@ -60,48 +60,36 @@ function ns(namespace: string, content: Record<string, unknown> = {}): XmlNode {
   return { '@xmlns': namespace, ...content } as XmlNode;
 }
 
-// ─── Агрегация заказов ────────────────────────────────────────────────────────
-// Схлопываем строки с одинаковым артикулом в одну GoodsInfo.
-// tnvedCode и description берём из БД (products), поэтому передаём маппинг.
+// ─── Маппинг заказов → строки GoodsInfo ──────────────────────────────────────
+// Каждая отправка — отдельная строка. Строки без ТН ВЭД пропускаются.
 
-export function aggregateOrders(
+export function mapOrdersToGoods(
   orders: N8nOrderItem[],
   tnvedMap: Record<number, { code: string; name: string; unit: string | null }>,
   usdRate: number,
 ): AggregatedGood[] {
-  const map = new Map<string, AggregatedGood>();
-
-  for (const order of orders) {
+  return orders.flatMap((order) => {
     const tnved = tnvedMap[Number(order.sku)];
-    if (!tnved) continue;
+    if (!tnved) return [];
 
-    const weight = parseFloat(order.weight) * order.quantity;
+    const weight = parseFloat(
+      (parseFloat(order.weight) * order.quantity).toFixed(4),
+    );
     const costRub = order.shipment_amount;
 
-    const existing = map.get(tnved.code);
-    if (existing) {
-      existing.totalQuantity += order.quantity;
-      existing.netWeight = parseFloat((existing.netWeight + weight).toFixed(4));
-      existing.invoicedCost += costRub;
-      existing.statisticalCostRub += costRub;
-      existing.statisticalCostUsd = parseFloat(
-        (existing.statisticalCostRub / usdRate).toFixed(2),
-      );
-    } else {
-      map.set(tnved.code, {
+    return [
+      {
         tnvedCode: tnved.code,
         tnvedName: tnved.name,
         unit: tnved.unit,
         totalQuantity: order.quantity,
-        netWeight: parseFloat(weight.toFixed(4)),
+        netWeight: weight,
         invoicedCost: costRub,
         statisticalCostRub: costRub,
         statisticalCostUsd: parseFloat((costRub / usdRate).toFixed(2)),
-      });
-    }
-  }
-
-  return [...map.values()];
+      },
+    ];
+  });
 }
 
 // ─── Уникальные документы (счета-фактуры) ────────────────────────────────────
@@ -222,7 +210,7 @@ export async function buildStatFormXml(
   const countryName = COUNTRY_NAME[countryCode] ?? countryCode;
   const featureTag =
     COUNTRY_FEATURES_TAG[countryCode] ?? 'BYOrganizationFeatures';
-  const goods = aggregateOrders(orders, tnvedMap, usdRate);
+  const goods = mapOrdersToGoods(orders, tnvedMap, usdRate);
   const documents = extractDocuments(orders);
   const totalAmountRub = goods.reduce((sum, g) => sum + g.invoicedCost, 0);
   const orgBlock = buildOrgBlock(org, declarant, doc);

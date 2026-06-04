@@ -35,7 +35,7 @@ export function StatFormRunItem({ run }: { run: StatFormRun }) {
         ) : (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
             {run.statForms.map((f) => (
-              <StatFormTile key={f.id} file={f} />
+              <StatFormTile key={f.id} file={f} period={run.period} />
             ))}
           </div>
         )}
