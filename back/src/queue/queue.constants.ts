@@ -1,4 +1,5 @@
 export const QUEUE_STATFORM = 'statform-generation';
+export const QUEUE_EMAIL = 'email';
 export const QUEUE_CLASSIFY = 'product-classification';
 
 export const JOB_GENERATE_XML = 'generate-xml';

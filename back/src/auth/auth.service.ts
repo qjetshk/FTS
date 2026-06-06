@@ -1,28 +1,37 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
 import * as argon2 from 'argon2';
-import { randomUUID } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { RedisService } from 'src/redis/redis.service';
+import { EmailProducerService } from 'src/email-producer/email-producer.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtPayload, StringValue } from './interfaces/jwt.interface';
 import { convertExpireTime } from 'src/utils/convert-expire-time.util';
 import { PLAN, PLAN_STATUS } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
     private redis: RedisService,
+    private emailProducer: EmailProducerService,
   ) {}
 
   // ─── Register ────────────────────────────────────────────────────────────────
@@ -62,6 +71,23 @@ export class AuthService {
         avatarUrl: `https://api.dicebear.com/10.x/lorelei-neutral/svg?backgroundColorFillStops=3&backgroundColorAngle=112&backgroundColor=e2e8f0&seed=${user.id}`,
       },
     });
+
+    const verifyToken = randomBytes(32).toString('hex');
+    const verifyExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerifyToken: verifyToken, emailVerifyExpiry: verifyExpiry },
+    });
+
+    const frontendUrl = this.config.get<string>('FRONTEND_URL', 'http://localhost:3001');
+    const verifyUrl = `${frontendUrl}/verify-email?token=${verifyToken}`;
+
+    this.emailProducer.sendWelcome(user.email, user.name).catch((e) =>
+      this.logger.error(`welcome email failed: ${e.message}`),
+    );
+    this.emailProducer.sendVerifyEmail(user.email, user.name, verifyUrl).catch((e) =>
+      this.logger.error(`verify-email failed: ${e.message}`),
+    );
 
     return this.issueTokens(user.id, res, userAgent, ipAddress);
   }
@@ -240,6 +266,73 @@ export class AuthService {
 
     return { accessToken, user };
   }
+
+  // ─── Forgot password ─────────────────────────────────────────────────────────
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (!user) return { message: 'Если аккаунт существует, письмо отправлено' };
+
+    const token = randomBytes(32).toString('hex');
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 час
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordResetToken: token, passwordResetExpiry: expiry },
+    });
+
+    const frontendUrl = this.config.get<string>('FRONTEND_URL', 'http://localhost:3001');
+    const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+
+    this.emailProducer.sendResetPassword(user.email, user.name, resetUrl).catch((e) =>
+      this.logger.error(`reset-password email failed: ${e.message}`),
+    );
+
+    return { message: 'Если аккаунт существует, письмо отправлено' };
+  }
+
+  // ─── Reset password ───────────────────────────────────────────────────────────
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        passwordResetToken: dto.token,
+        passwordResetExpiry: { gt: new Date() },
+      },
+    });
+
+    if (!user) throw new BadRequestException('Ссылка недействительна или устарела');
+
+    const hash = await argon2.hash(dto.password);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { password: hash, passwordResetToken: null, passwordResetExpiry: null },
+    });
+
+    return { message: 'Пароль успешно изменён' };
+  }
+
+  // ─── Verify email ─────────────────────────────────────────────────────────────
+
+  async verifyEmail(token: string) {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        emailVerifyToken: token,
+        emailVerifyExpiry: { gt: new Date() },
+      },
+    });
+
+    if (!user) throw new BadRequestException('Ссылка недействительна или устарела');
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { isEmailVerified: true, emailVerifyToken: null, emailVerifyExpiry: null },
+    });
+
+    return { message: 'Email подтверждён' };
+  }
+
+  // ─── Me ───────────────────────────────────────────────────────────────────────
 
   async getMe(userId: string) {
     const user = await this.prisma.user.findUnique({
