@@ -1,58 +1,88 @@
-"use client"
+"use client";
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { toast } from "sonner"
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, Button, Input } from "@/shared/ui"
-import { useCompanyInfoMutation, useClassifyMutation, type Organization } from "@/entities/organization"
-import { useMeQuery } from "@/entities/user"
-import { apiKeysSchema, type ApiKeysFormValues } from "../model/api-keys.schema"
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+  Button,
+  Input,
+} from "@/shared/ui";
+import {
+  useCompanyInfoMutation,
+  useClassifyMutation,
+  type Organization,
+} from "@/entities/organization";
+import { useMeQuery } from "@/entities/user";
+import {
+  apiKeysSchema,
+  type ApiKeysFormValues,
+} from "../model/api-keys.schema";
+import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 
 type Props = {
-  onComplete: (orgData: Organization, apiKey: string, clientId: string) => void
-}
+  onComplete: (orgData: Organization, apiKey: string, clientId: string) => void;
+};
 
 export function ApiKeysStep({ onComplete }: Props) {
-  const { data: user } = useMeQuery()
-  const [companyInfo, { isLoading }] = useCompanyInfoMutation()
-  const [classify] = useClassifyMutation()
+  const { data: user } = useMeQuery();
+  const [companyInfo, { isLoading }] = useCompanyInfoMutation();
+  const [classify] = useClassifyMutation();
 
   const form = useForm<ApiKeysFormValues>({
     resolver: zodResolver(apiKeysSchema),
     defaultValues: { apiKey: "", clientId: "" },
-  })
+  });
 
   const onSubmit = async (values: ApiKeysFormValues) => {
     if (!user) {
-      toast.error("Пользователь не найден, войдите заново")
-      return
+      toast.error("Пользователь не найден, войдите заново");
+      return;
     }
     try {
       const orgData = await companyInfo({
         apiKey: values.apiKey,
         clientId: values.clientId,
         userId: user.id,
-      }).unwrap()
+      }).unwrap();
 
-      classify({ clientId: values.clientId })
+      classify({ clientId: values.clientId });
 
-      onComplete(orgData, values.apiKey, values.clientId)
+      onComplete(orgData, values.apiKey, values.clientId);
     } catch {
-      toast.error("Не удалось получить данные организации. Проверьте ключи.")
+      toast.error("Не удалось получить данные организации. Проверьте ключи.");
     }
-  }
+  };
 
   return (
     <div className="flex flex-col items-center gap-8 w-full max-w-sm">
       <div className="text-center">
         <h2 className="text-xl font-semibold">Подключите магазин OZON</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Найдите ключи в личном кабинете OZON → Настройки → API
+          Найдите ключи в личном кабинете OZON —{" "}
+          <Link
+            href="https://seller.ozon.ru/app/settings/api-keys"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-0.5 text-primary font-medium underline-offset-4 hover:underline"
+          >
+            Настройки → API
+            <ExternalLink className="size-3" />
+          </Link>
         </p>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="w-full flex flex-col gap-4">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="w-full flex flex-col gap-4"
+        >
           <FormField
             control={form.control}
             name="apiKey"
@@ -60,7 +90,10 @@ export function ApiKeysStep({ onComplete }: Props) {
               <FormItem>
                 <FormLabel>API Key</FormLabel>
                 <FormControl>
-                  <Input placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" {...field} />
+                  <Input
+                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -85,5 +118,5 @@ export function ApiKeysStep({ onComplete }: Props) {
         </form>
       </Form>
     </div>
-  )
+  );
 }

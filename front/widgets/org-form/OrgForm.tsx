@@ -15,7 +15,7 @@ import {
   type Organization,
 } from "@/entities/organization"
 import { orgFormSchema, type OrgFormValues } from "./model/org-form.schema"
-import { DocTypeSelect } from "./ui/DocTypeSelect"
+import { DocTypeSelect } from "@/entities/organization"
 
 type Props = {
   org: Organization
