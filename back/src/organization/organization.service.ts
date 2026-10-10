@@ -190,6 +190,10 @@ export class OrganizationService {
         timeout: 3 * 60 * 60 * 1000,
       },
     );
+    await this.prisma.organization.update({
+      where: { ozonClientId: Number(clientId) },
+      data: { productsSyncedAt: new Date() },
+    });
   }
 
   async updateOrganization(dto: UpdateOrganizationDto) {

@@ -42,6 +42,7 @@ export type Organization = {
   orgLang: string
   userId: string
   declarant: Declarant | null
+  productsSyncedAt: string | null
   createdAt: string
   updatedAt: string
 }

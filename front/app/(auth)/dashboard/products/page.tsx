@@ -3,7 +3,7 @@
 import { Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
-import { useGetFirstOrgQuery, useGetOrgByIdQuery } from "@/entities/organization"
+import { useGetFirstOrgQuery, useGetOrgByIdQuery, ProductsSyncedAt } from "@/entities/organization"
 import { useProductChanges, SaveChangesButton } from "@/features/save-product-changes"
 import { ProductsTable } from "@/widgets/products-table"
 
@@ -30,7 +30,10 @@ function ProductsPageContent() {
     <div className="flex flex-col gap-3 h-[calc(100vh-4rem)]">
 
       <div className="flex items-center justify-between shrink-0">
-        <h1 className="text-xl font-semibold text-foreground">Товары</h1>
+        <div className="flex flex-col gap-0.5">
+          <h1 className="text-xl font-semibold text-foreground">Товары</h1>
+          {org && <ProductsSyncedAt syncedAt={org.productsSyncedAt} />}
+        </div>
         <SaveChangesButton
           hasPending={changes.hasPending}
           isSaving={changes.isSaving}

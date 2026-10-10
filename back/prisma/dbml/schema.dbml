@@ -56,6 +56,7 @@ Table organizations {
   room String
   postalCode String [not null]
   orgLang String [not null, default: 'RU']
+  productsSyncedAt DateTime
   userId String [not null]
   user users [not null]
   products products [not null]

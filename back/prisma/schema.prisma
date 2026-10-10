@@ -101,6 +101,9 @@ model Organization {
 
   orgLang String @default("RU") @map("org_lang")
 
+  // время завершения последнего прогона classify_TNVED (синк товаров из OZON)
+  productsSyncedAt DateTime? @map("products_synced_at")
+
   // ✅ каскад при удалении юзера
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

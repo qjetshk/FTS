@@ -2,6 +2,7 @@ export type { Organization, Declarant, Document, CompanyInfoResponse, OrgListIte
 export { isIp } from "./lib/is-ip.lib"
 export { DOCUMENT_TYPES, type DocumentTypeCode, type DocumentTypeShort } from "./model/document-types.data"
 export { DocTypeSelect } from "./ui/DocTypeSelect"
+export { ProductsSyncedAt } from "./ui/ProductsSyncedAt"
 export {
   useGetAllOrgsQuery,
   useGetOrgByIdQuery,
