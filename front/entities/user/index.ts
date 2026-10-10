@@ -1,9 +1,14 @@
 export type { User, AuthResponse, UserPlan, UserPlanStatus } from "./model/user.type"
-export { loginSchema, type LoginFormValues } from "./model/login.schema"
-export { registerSchema, type RegisterFormValues } from "./model/register.schema"
 export {
-  useLoginMutation,
-  useRegisterMutation,
+  emailSchema,
+  codeSchema,
+  type EmailFormValues,
+  type CodeFormValues,
+} from "./model/email-code.schema"
+export { profileNameSchema, type ProfileNameValues } from "./model/profile-name.schema"
+export {
+  useRequestCodeMutation,
+  useVerifyCodeMutation,
   useLogoutMutation,
   useMeQuery,
   useCompleteOnboardingMutation,

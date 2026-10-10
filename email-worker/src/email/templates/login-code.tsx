@@ -1,14 +1,13 @@
 import {
   Html, Head, Preview, Body, Container,
-  Heading, Text, Button, Hr, Font,
+  Heading, Text, Hr, Font, Section,
 } from '@react-email/components';
 
 type Props = {
-  name: string;
-  verifyUrl: string;
+  code: string;
 };
 
-export function VerifyEmailTemplate({ name, verifyUrl }: Props) {
+export function LoginCodeTemplate({ code }: Props) {
   return (
     <Html lang="ru">
       <Head>
@@ -23,25 +22,18 @@ export function VerifyEmailTemplate({ name, verifyUrl }: Props) {
           fontStyle="normal"
         />
       </Head>
-      <Preview>Подтвердите ваш email адрес</Preview>
+      <Preview>Код для входа в easyfts: {code}</Preview>
       <Body style={body}>
         <Container style={container}>
-          <Heading style={heading}>Подтверждение email</Heading>
-          <Text style={text}>Привет, {name}!</Text>
-          <Text style={text}>
-            Нажмите кнопку ниже, чтобы подтвердить ваш email адрес.
-            Ссылка действительна 24 часа.
-          </Text>
-          <Button href={verifyUrl} style={button}>
-            Подтвердить email
-          </Button>
-          <Text style={hint}>
-            Если кнопка не работает, скопируйте ссылку в браузер:{' '}
-            <a href={verifyUrl} style={link}>{verifyUrl}</a>
-          </Text>
+          <Heading style={heading}>Код для входа</Heading>
+          <Text style={text}>Введите этот код на странице входа:</Text>
+          <Section style={codeBox}>
+            <Text style={codeText}>{code}</Text>
+          </Section>
+          <Text style={hint}>Код действует 10 минут. Никому его не сообщайте.</Text>
           <Hr style={hr} />
           <Text style={footer}>
-            Если вы не регистрировались в FTS, просто проигнорируйте это письмо.
+            Если вы не пытались войти в easyfts, просто проигнорируйте это письмо.
           </Text>
         </Container>
       </Body>
@@ -59,19 +51,21 @@ const container = {
 };
 const heading = { fontSize: '24px', fontWeight: '600', color: '#0f172a', marginBottom: '24px' };
 const text = { fontSize: '15px', lineHeight: '24px', color: '#334155' };
-const button = {
-  backgroundColor: '#2563eb',
-  borderRadius: '6px',
-  color: '#ffffff',
-  fontSize: '15px',
+const codeBox = {
+  backgroundColor: '#f0fdf4',
+  borderRadius: '8px',
+  margin: '16px 0',
+  padding: '8px 0',
+};
+const codeText = {
+  fontSize: '32px',
   fontWeight: '600',
-  textDecoration: 'none',
+  letterSpacing: '8px',
   textAlign: 'center' as const,
-  display: 'block',
-  padding: '12px 24px',
-  margin: '24px 0',
+  color: '#16a34a',
+  fontFamily: 'ui-monospace, Menlo, Consolas, monospace',
+  margin: '0',
 };
 const hint = { fontSize: '13px', lineHeight: '20px', color: '#64748b' };
-const link = { color: '#2563eb' };
 const hr = { borderColor: '#e2e8f0', margin: '32px 0 24px' };
 const footer = { fontSize: '13px', color: '#94a3b8' };

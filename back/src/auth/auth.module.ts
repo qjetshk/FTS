@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { EmailCodeService } from './email-code.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './interfaces/jwt-refresh.strategy';
 import { EmailProducerModule } from 'src/email-producer/email-producer.module';
@@ -12,6 +13,6 @@ import { EmailProducerModule } from 'src/email-producer/email-producer.module';
     EmailProducerModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtRefreshStrategy],
+  providers: [AuthService, EmailCodeService, JwtStrategy, JwtRefreshStrategy],
 })
 export class AuthModule {}

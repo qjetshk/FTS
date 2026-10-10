@@ -40,7 +40,21 @@ services:
       - postgres
       - redis
 
- 
+  # без build: готовый образ + node_modules с хоста (npm install в ../email-worker), docker в сеть не ходит
+  email-worker:
+    image: node:22-alpine
+    container_name: fts-email-worker
+    restart: always
+    working_dir: /app
+    env_file: ../email-worker/.env
+    environment:
+      REDIS_HOST: redis
+    volumes:
+      - ../email-worker:/app
+    command: npm run start:dev
+    depends_on:
+      - redis
+
 
 volumes:
   pgdata:

@@ -1,20 +1,20 @@
 import { baseApi } from "@/shared/api"
 import type { AuthResponse, User } from "../model/user.type"
-import type { LoginFormValues } from "../model/login.schema"
-import type { RegisterFormValues } from "../model/register.schema"
+import type { ProfileNameValues } from "../model/profile-name.schema"
 
-type UpdateProfileBody = { name: string }
+type RequestCodeBody = { email: string }
+type VerifyCodeBody = { email: string; code: string }
 
 export type Session = { id: string; createdAt: string; expiresAt: string; deviceName: string; isCurrent: boolean }
 export type UserStats = { organizations: number; products: number; statforms: number }
 
 const authApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    login: build.mutation<AuthResponse, LoginFormValues>({
-      query: (body) => ({ url: "/auth/login", method: "POST", body }),
+    requestCode: build.mutation<{ message: string }, RequestCodeBody>({
+      query: (body) => ({ url: "/auth/email/request-code", method: "POST", body }),
     }),
-    register: build.mutation<AuthResponse, RegisterFormValues>({
-      query: (body) => ({ url: "/auth/register", method: "POST", body }),
+    verifyCode: build.mutation<AuthResponse, VerifyCodeBody>({
+      query: (body) => ({ url: "/auth/email/verify-code", method: "POST", body }),
     }),
     logout: build.mutation<void, void>({
       query: () => ({ url: "/auth/logout", method: "POST" }),
@@ -31,7 +31,7 @@ const authApi = baseApi.injectEndpoints({
       query: () => ({ url: "/auth/reset-onboarding", method: "POST" }),
       invalidatesTags: ["User"],
     }),
-    updateProfile: build.mutation<User, UpdateProfileBody>({
+    updateProfile: build.mutation<User, ProfileNameValues>({
       query: (body) => ({ url: "/auth/profile", method: "PATCH", body }),
       invalidatesTags: ["User"],
     }),
@@ -51,8 +51,8 @@ const authApi = baseApi.injectEndpoints({
 })
 
 export const {
-  useLoginMutation,
-  useRegisterMutation,
+  useRequestCodeMutation,
+  useVerifyCodeMutation,
   useLogoutMutation,
   useMeQuery,
   useCompleteOnboardingMutation,

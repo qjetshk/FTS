@@ -2,25 +2,16 @@ export const EMAIL_QUEUE = 'email';
 
 export type WelcomeJobData = {
   to: string;
-  name: string;
 };
 
-export type VerifyEmailJobData = {
+export type LoginCodeJobData = {
   to: string;
-  name: string;
-  verifyUrl: string;
-};
-
-export type ResetPasswordJobData = {
-  to: string;
-  name: string;
-  resetUrl: string;
+  code: string;
 };
 
 export type EmailJobMap = {
   'welcome': WelcomeJobData;
-  'verify-email': VerifyEmailJobData;
-  'reset-password': ResetPasswordJobData;
+  'login-code': LoginCodeJobData;
 };
 
 export type EmailJobName = keyof EmailJobMap;

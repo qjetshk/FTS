@@ -5,14 +5,9 @@
 Table users {
   id String [pk]
   email String [unique, not null]
-  password String [not null]
-  name String [not null]
+  name String
   avatarUrl String
   isEmailVerified Boolean [not null, default: false]
-  emailVerifyToken String [unique]
-  emailVerifyExpiry DateTime
-  passwordResetToken String [unique]
-  passwordResetExpiry DateTime
   isOnboardingComplete Boolean [not null, default: false]
   plan PLAN [not null, default: 'TRIAL']
   planExpiresAt DateTime

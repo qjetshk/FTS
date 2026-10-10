@@ -1,6 +1,7 @@
 export { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "./Form"
 export { Button, buttonVariants } from "./Button"
 export { Input } from "./Input"
+export { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from "./InputOtp"
 export { Badge, badgeVariants } from "./Badge"
 export {
   Card,

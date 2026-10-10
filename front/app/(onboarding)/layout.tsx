@@ -17,12 +17,12 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
   }, [userLoading, userError, router])
 
   useEffect(() => {
-    if (!userLoading && user?.isOnboardingComplete) {
-      router.replace(ROUTES.statforms)
-    }
+    if (userLoading || !user) return
+    if (!user.name) router.replace(ROUTES.welcome)
+    else if (user.isOnboardingComplete) router.replace(ROUTES.statforms)
   }, [userLoading, user, router])
 
-  if (userLoading) {
+  if (userLoading || (user && !user.name)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />

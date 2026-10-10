@@ -6,18 +6,15 @@ import {
   HttpStatus,
   Patch,
   Post,
-  Query,
   Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { Request, Response } from 'express';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
+import { RequestCodeDto } from './dto/request-code.dto';
+import { VerifyCodeDto } from './dto/verify-code.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
 import type { JwtPayload } from './interfaces/jwt.interface';
 import { JwtAuthGuard, JwtRefreshGuard } from 'src/guards/jwt.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
@@ -26,24 +23,20 @@ import { CurrentUser } from 'src/decorators/current-user.decorator';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('register')
-  @HttpCode(HttpStatus.CREATED)
-  async register(
-    @Body() dto: RegisterDto,
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    return this.authService.register(dto, res, req.headers['user-agent'], req.ip);
+  @Post('email/request-code')
+  @HttpCode(HttpStatus.OK)
+  async requestCode(@Body() dto: RequestCodeDto, @Req() req: Request) {
+    return this.authService.requestCode(dto, req.ip);
   }
 
-  @Post('login')
+  @Post('email/verify-code')
   @HttpCode(HttpStatus.OK)
-  async login(
-    @Body() dto: LoginDto,
+  async verifyCode(
+    @Body() dto: VerifyCodeDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.login(dto, res, req.headers['user-agent'], req.ip);
+    return this.authService.verifyCode(dto, res, req.headers['user-agent'], req.ip);
   }
 
   @Post('logout')
@@ -119,24 +112,6 @@ export class AuthController {
       refreshToken: string;
     };
     return this.authService.revokeOtherSessions(userId, refreshToken);
-  }
-
-  @Post('forgot-password')
-  @HttpCode(HttpStatus.OK)
-  async forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(dto);
-  }
-
-  @Post('reset-password')
-  @HttpCode(HttpStatus.OK)
-  async resetPassword(@Body() dto: ResetPasswordDto) {
-    return this.authService.resetPassword(dto);
-  }
-
-  @Get('verify-email')
-  @HttpCode(HttpStatus.OK)
-  async verifyEmail(@Query('token') token: string) {
-    return this.authService.verifyEmail(token);
   }
 
   @Get('stats')

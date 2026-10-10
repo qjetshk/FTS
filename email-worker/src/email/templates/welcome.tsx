@@ -1,13 +1,9 @@
 import {
   Html, Head, Preview, Body, Container,
-  Heading, Text, Button, Hr, Font,
+  Heading, Text, Hr, Font,
 } from '@react-email/components';
 
-type Props = {
-  name: string;
-};
-
-export function WelcomeEmail({ name }: Props) {
+export function WelcomeEmail() {
   return (
     <Html lang="ru">
       <Head>
@@ -22,13 +18,12 @@ export function WelcomeEmail({ name }: Props) {
           fontStyle="normal"
         />
       </Head>
-      <Preview>Добро пожаловать в FTS, {name}!</Preview>
+      <Preview>Добро пожаловать в easyfts!</Preview>
       <Body style={body}>
         <Container style={container}>
-          <Heading style={heading}>Добро пожаловать в FTS</Heading>
-          <Text style={text}>Привет, {name}!</Text>
+          <Heading style={heading}>Добро пожаловать в easyfts</Heading>
           <Text style={text}>
-            FTS — сервис для автоматической классификации товаров по ТН ВЭД и
+            easyfts — сервис для автоматической классификации товаров по ТН ВЭД и
             генерации статистических форм для продавцов OZON (ЕАЭС).
           </Text>
           <Text style={text}>
@@ -37,7 +32,7 @@ export function WelcomeEmail({ name }: Props) {
           </Text>
           <Hr style={hr} />
           <Text style={footer}>
-            © {new Date().getFullYear()} FTS. Таможенная отчётность для продавцов OZON.
+            © {new Date().getFullYear()} easyfts. Таможенная отчётность для продавцов OZON.
           </Text>
         </Container>
       </Body>

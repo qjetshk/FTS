@@ -1,14 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Resend } from 'resend';
 import { render } from '@react-email/render';
 import { WelcomeEmail } from './templates/welcome';
-import { VerifyEmailTemplate } from './templates/verify-email';
-import { ResetPasswordTemplate } from './templates/reset-password';
+import { LoginCodeTemplate } from './templates/login-code';
 import type { EmailJobData, EmailJobName } from './email.types';
 
 @Injectable()
 export class EmailService {
-  private readonly logger = new Logger(EmailService.name);
   private readonly resend: Resend;
   private readonly from: string;
 
@@ -17,14 +15,15 @@ export class EmailService {
     this.from = process.env.EMAIL_FROM ?? 'FTS <noreply@fts.ru>';
   }
 
-  async send<T extends EmailJobName>(name: T, data: EmailJobData<T>): Promise<void> {
+  // возвращает id письма в Resend — по нему его видно в дашборде Resend
+  async send<T extends EmailJobName>(name: T, data: EmailJobData<T>): Promise<string> {
     const { subject, html } = await this.build(name, data);
     const to = (data as { to: string }).to;
 
-    const { error } = await this.resend.emails.send({ from: this.from, to, subject, html });
-    if (error) throw new Error(error.message);
+    const { data: sent, error } = await this.resend.emails.send({ from: this.from, to, subject, html });
+    if (error) throw new Error(`Resend: ${error.message}`);
 
-    this.logger.log(`sent "${name}" → ${to}`);
+    return sent?.id ?? 'unknown';
   }
 
   private async build<T extends EmailJobName>(
@@ -33,24 +32,16 @@ export class EmailService {
   ): Promise<{ subject: string; html: string }> {
     switch (name) {
       case 'welcome': {
-        const d = data as EmailJobData<'welcome'>;
         return {
-          subject: `Добро пожаловать в FTS, ${d.name}!`,
-          html: await render(WelcomeEmail({ name: d.name })),
+          subject: 'Добро пожаловать в FTS!',
+          html: await render(WelcomeEmail()),
         };
       }
-      case 'verify-email': {
-        const d = data as EmailJobData<'verify-email'>;
+      case 'login-code': {
+        const d = data as EmailJobData<'login-code'>;
         return {
-          subject: 'Подтвердите ваш email — FTS',
-          html: await render(VerifyEmailTemplate({ name: d.name, verifyUrl: d.verifyUrl })),
-        };
-      }
-      case 'reset-password': {
-        const d = data as EmailJobData<'reset-password'>;
-        return {
-          subject: 'Сброс пароля — FTS',
-          html: await render(ResetPasswordTemplate({ name: d.name, resetUrl: d.resetUrl })),
+          subject: `${d.code} — код для входа в FTS`,
+          html: await render(LoginCodeTemplate({ code: d.code })),
         };
       }
       default:

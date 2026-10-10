@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { env } from 'process';
 import cookieParser from 'cookie-parser';
@@ -10,7 +11,9 @@ import { ExpressAdapter } from '@bull-board/express';
 import { Queue } from 'bullmq';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // за ngrok / reverse-proxy: req.ip = реальный клиент из X-Forwarded-For (лимиты кодов, сессии)
+  app.set('trust proxy', 1);
 
   const config = app.get(ConfigService);
 
@@ -27,6 +30,7 @@ async function bootstrap() {
     queues: [
       new BullMQAdapter(new Queue('statform-generation', { connection: redisConnection })),
       new BullMQAdapter(new Queue('product-classification', { connection: redisConnection })),
+      new BullMQAdapter(new Queue('email', { connection: redisConnection })),
     ],
     serverAdapter,
   });

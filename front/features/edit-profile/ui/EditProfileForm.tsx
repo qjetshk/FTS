@@ -7,19 +7,18 @@ import {
   Form, FormField, FormItem, FormLabel, FormControl, FormMessage,
   Button, Input,
 } from "@/shared/ui"
-import { useMeQuery, useUpdateProfileMutation, type User } from "@/entities/user"
-import { editProfileSchema, type EditProfileValues } from "../model/edit-profile.schema"
+import { useMeQuery, useUpdateProfileMutation, profileNameSchema, type ProfileNameValues } from "@/entities/user"
 
 export function EditProfileForm() {
   const { data: user } = useMeQuery()
   const [updateProfile, { isLoading }] = useUpdateProfileMutation()
 
-  const form = useForm<EditProfileValues>({
-    resolver: zodResolver(editProfileSchema),
+  const form = useForm<ProfileNameValues>({
+    resolver: zodResolver(profileNameSchema),
     values: { name: user?.name ?? "" },
   })
 
-  const onSubmit = async (values: EditProfileValues) => {
+  const onSubmit = async (values: ProfileNameValues) => {
     try {
       await updateProfile(values).unwrap()
       toast.success("Имя обновлено")

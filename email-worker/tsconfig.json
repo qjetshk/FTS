@@ -22,5 +22,11 @@
     "noImplicitAny": true,
     "strictBindCallApply": true,
     "noFallthroughCasesInSwitch": true
+  },
+  // Docker Desktop (WSL2) не пробрасывает события ФС из Windows-папки → --watch только через опрос
+  "watchOptions": {
+    "watchFile": "dynamicPriorityPolling",
+    "watchDirectory": "dynamicPriorityPolling",
+    "excludeDirectories": ["**/node_modules", "dist"]
   }
 }

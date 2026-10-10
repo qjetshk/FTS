@@ -4,7 +4,6 @@ import Image from "next/image"
 import { CreditCard } from "lucide-react"
 import { useMeQuery } from "@/entities/user"
 import { EditProfileForm } from "@/features/edit-profile"
-import { ResetPasswordButton } from "@/features/reset-password"
 import { SessionsList } from "@/features/manage-sessions"
 import { NotificationSettings } from "@/features/notification-settings"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Skeleton } from "@/shared/ui"
@@ -65,7 +64,7 @@ export default function AccountPage() {
               {user.avatarUrl ? (
                 <Image
                   src={user.avatarUrl}
-                  alt={user.name}
+                  alt={user.name ?? ""}
                   width={56}
                   height={56}
                   className="rounded-full border border-border"
@@ -73,7 +72,7 @@ export default function AccountPage() {
                 />
               ) : (
                 <div className="size-14 rounded-full bg-muted flex items-center justify-center text-lg font-semibold text-muted-foreground">
-                  {user.name.charAt(0).toUpperCase()}
+                  {(user.name ?? user.email).charAt(0).toUpperCase()}
                 </div>
               )}
               <div className="flex flex-col gap-0.5">
@@ -114,18 +113,6 @@ export default function AccountPage() {
                   После окончания пробного периода выберите подходящий тариф
                 </p>
               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Безопасность</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              <p className="text-sm text-muted-foreground">
-                Письмо со ссылкой для сброса пароля придёт на {user.email}
-              </p>
-              <ResetPasswordButton />
             </CardContent>
           </Card>
         </div>
