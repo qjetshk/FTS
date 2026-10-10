@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import type { ColumnSizingState } from "@tanstack/react-table"
 import { Button } from "@/shared/ui"
 import { useGetProductsQuery, useGetProductsSnapshotQuery, isNeedsAttention, type PendingTnved } from "@/entities/product"
 import { cn } from "@/shared/lib"
@@ -24,6 +25,8 @@ const NOOP = () => {}
 
 export function ProductsTable({ clientId, className, showClassificationProgress = false, pendingTnvedMap = EMPTY_PENDING_TNVED, onTnvedSelect = NOOP, pendingCountryMap = EMPTY_PENDING_COUNTRY, onCountrySelect = NOOP }: Props) {
   const [mainPage, setMainPage] = useState(1)
+  // shared between both blocks so their columns stay aligned
+  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({})
 
   const { data, isLoading } = useGetProductsQuery({ clientId, page: 1, limit: 100 })
   const { data: snapshot = [] } = useGetProductsSnapshotQuery(clientId, {
@@ -57,6 +60,8 @@ export function ProductsTable({ clientId, className, showClassificationProgress 
           variant="attention"
           label={isLoading ? undefined : `Требует внимания — ${badItems.length}`}
           maxHeight={attentionMaxH}
+          columnSizing={columnSizing}
+          onColumnSizingChange={setColumnSizing}
           pendingTnvedMap={pendingTnvedMap}
           onTnvedSelect={onTnvedSelect}
           pendingCountryMap={pendingCountryMap}
@@ -71,6 +76,8 @@ export function ProductsTable({ clientId, className, showClassificationProgress 
         variant="main"
         label={(!isLoading && hasBad && goodItems.length > 0) ? `Товары — ${goodItems.length}` : undefined}
         flex
+        columnSizing={columnSizing}
+        onColumnSizingChange={setColumnSizing}
         pendingTnvedMap={pendingTnvedMap}
         onTnvedSelect={onTnvedSelect}
         pendingCountryMap={pendingCountryMap}

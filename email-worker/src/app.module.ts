@@ -1,15 +1,22 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
-    BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST ?? 'localhost',
-        port: Number(process.env.REDIS_PORT ?? 6379),
-        password: process.env.REDIS_PASSWORD,
-      },
+    ConfigModule.forRoot({ isGlobal: true }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (cfg: ConfigService) => ({
+        connection: {
+          host: cfg.getOrThrow('REDIS_HOST'),
+          port: cfg.get<number>('REDIS_PORT', 6379),
+          maxRetriesPerRequest: null,
+          enableReadyCheck: false,
+        },
+      }),
     }),
     EmailModule,
   ],

@@ -1,10 +1,8 @@
-import { useState } from "react"
-import type { ReactNode } from "react"
-import { Group, Panel, Separator } from "react-resizable-panels"
+import { getCoreRowModel, useReactTable, type ColumnSizingState, type OnChangeFn } from "@tanstack/react-table"
 import { Skeleton } from "@/shared/ui"
 import { cn } from "@/shared/lib"
 import { type Product, type PendingTnved } from "@/entities/product"
-import { HEADS, DEFAULT_SIZES, MIN_SIZES } from "../config/table.config"
+import { COLUMNS } from "../config/table.config"
 import { ProductRow } from "./ProductRow"
 
 type Props = {
@@ -15,20 +13,27 @@ type Props = {
   label?: string
   maxHeight?: number
   flex?: boolean
+  columnSizing: ColumnSizingState
+  onColumnSizingChange: OnChangeFn<ColumnSizingState>
   pendingTnvedMap: Record<number, PendingTnved>
   onTnvedSelect: (productId: number, code: string, name: string | null, unit: string | null) => void
   pendingCountryMap: Record<number, string>
   onCountrySelect: (productId: number, country: string) => void
 }
 
-export function TableBlock({ items, clientId, isLoading, variant, label, maxHeight, flex, pendingTnvedMap, onTnvedSelect, pendingCountryMap, onCountrySelect }: Props) {
-  const [sizes, setSizes] = useState(DEFAULT_SIZES)
-  const gridCols = sizes.map(s => `${s}fr`).join(" ")
+export function TableBlock({ items, clientId, isLoading, variant, label, maxHeight, flex, columnSizing, onColumnSizingChange, pendingTnvedMap, onTnvedSelect, pendingCountryMap, onCountrySelect }: Props) {
+  const table = useReactTable({
+    data: items,
+    columns: COLUMNS,
+    getCoreRowModel: getCoreRowModel(),
+    columnResizeMode: "onChange",
+    state: { columnSizing },
+    onColumnSizingChange,
+  })
 
-  const handleLayoutChange = (layout: Record<string, number>) => {
-    const arr = HEADS.map((_, i) => layout[`col-${i}`] ?? sizes[i])
-    if (arr.some(v => v !== undefined)) setSizes(arr)
-  }
+  // fixed px columns + trailing 1fr filler so the table stretches on wide screens and scrolls on narrow ones
+  const gridCols = [...table.getVisibleLeafColumns().map(c => `${c.getSize()}px`), "1fr"].join(" ")
+  const headers = table.getHeaderGroups()[0].headers
 
   const borderCls = variant === "attention" ? "border-red-200" : "border-border"
   const headBg = variant === "attention" ? "bg-red-50" : "bg-background"
@@ -42,32 +47,36 @@ export function TableBlock({ items, clientId, isLoading, variant, label, maxHeig
         </p>
       )}
       <div
-        className={cn("overflow-x-auto overflow-y-auto rounded-xl border", borderCls)}
+        className={cn("overflow-auto rounded-xl border", borderCls)}
         style={maxHeight ? { maxHeight } : flex ? { flex: 1, minHeight: 0 } : undefined}
       >
-        <div className="min-w-175">
-          <div className={cn("sticky top-0 z-10 border-b", headBg, borderCls)}>
-            <Group orientation="horizontal" onLayoutChange={handleLayoutChange} style={{ display: "flex", height: 36 }}>
-              {HEADS.flatMap((h, i) => {
-                const nodes: ReactNode[] = []
-                if (i > 0) nodes.push(
-                  <Separator key={`sep-${HEADS[i] || "img"}`}
-                    className="w-1 cursor-col-resize bg-border/60 hover:bg-primary active:bg-primary transition-colors shrink-0" />
-                )
-                nodes.push(
-                  <Panel key={`panel-${HEADS[i] || "img"}`} id={`col-${i}`} defaultSize={DEFAULT_SIZES[i]} minSize={MIN_SIZES[i]}
-                    className="flex items-center px-2 overflow-hidden">
-                    <span className={cn("text-xs font-medium truncate select-none", headText)}>{h}</span>
-                  </Panel>
-                )
-                return nodes
-              })}
-            </Group>
+        <div className="w-max min-w-full">
+          <div className={cn("sticky top-0 z-10 grid h-9 border-b", headBg, borderCls)} style={{ gridTemplateColumns: gridCols }}>
+            {headers.map((header, i) => (
+              <div key={header.id} className="group relative flex items-center px-2 overflow-hidden">
+                <span className={cn("text-xs font-medium truncate select-none", headText)}>
+                  {header.column.columnDef.header as string}
+                </span>
+                {header.column.getCanResize() && i < headers.length - 1 && (
+                  <div
+                    onMouseDown={header.getResizeHandler()}
+                    onTouchStart={header.getResizeHandler()}
+                    onDoubleClick={() => header.column.resetSize()}
+                    className="absolute right-0 top-0 flex h-full w-3 cursor-col-resize touch-none select-none justify-end"
+                  >
+                    <div className={cn(
+                      "my-2 w-0.5 rounded-full bg-border group-hover:bg-primary/60",
+                      header.column.getIsResizing() && "bg-primary group-hover:bg-primary"
+                    )} />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
           {isLoading
             ? Array.from({ length: 3 }).map((_, i) => (
                 <div key={`skeleton-row-${i}`} className="grid border-b border-border/50" style={{ gridTemplateColumns: gridCols }}>
-                  {HEADS.map((h, j) => <div key={`skeleton-col-${h || j}`} className="p-2"><Skeleton className="h-4 w-full" /></div>)}
+                  {COLUMNS.map(c => <div key={`skeleton-col-${c.id}`} className="p-2"><Skeleton className="h-4 w-full" /></div>)}
                 </div>
               ))
             : items.map(p => (

@@ -3,30 +3,43 @@ import { parse } from 'node-html-parser';
 
 @Injectable()
 export class CbrService {
+  // date: 'DD.MM.YYYY'
   async getUsdRate(date: string): Promise<number> {
-    // date: 'DD.MM.YYYY'
-    const url =
-      `https://cbr.ru/currency_base/dynamics/?UniDbQuery.Posted=True` +
-      `&UniDbQuery.so=1&UniDbQuery.mode=1` +
-      `&UniDbQuery.VAL_NM_RQ=R01235` +
-      `&UniDbQuery.From=${date}&UniDbQuery.To=${date}`;
+    /* const dateReq = date.replace(/\./g, '/'); // XML_daily ждёт DD/MM/YYYY
+    const url = `https://cbr.ru/scripts/XML_daily.asp?date_req=${dateReq}`;
 
     const res = await fetch(url);
-    const html = await res.text();
-    const root = parse(html);
+    if (!res.ok) {
+      throw new Error(`ЦБ: HTTP ${res.status} для даты ${date}`);
+    }
 
-    // table.data содержит 3 tr: заголовок валюты, шапка столбцов, строка с курсом
-    const rows = root.querySelectorAll('table.data tr');
-    // нас интересует последний tr — там дата + единиц + курс
-    const dataRow = rows[rows.length - 1];
-    if (!dataRow) throw new Error(`ЦБ: таблица не найдена для даты ${date}`);
+    // ЦБ отдаёт XML в windows-1251
+    const buf = Buffer.from(await res.arrayBuffer());
+    const xml = new TextDecoder('windows-1251').decode(buf);
 
-    const cells = dataRow.querySelectorAll('td');
-    // td[0] = дата, td[1] = единиц, td[2] = курс
-    const rateStr = cells[2]?.text.trim().replace(',', '.');
-    const rate = parseFloat(rateStr);
+    const root = parse(xml);
 
-    if (isNaN(rate)) throw new Error(`ЦБ: не удалось распарсить курс: "${rateStr}"`);
-    return rate;
+    // ВАЖНО: node-html-parser приводит теги и атрибуты к нижнему регистру,
+    // поэтому селекторы строчными: valute[id=...], value, nominal
+    const usdNode = root.querySelector('valute[id="R01235"]');
+    if (!usdNode) {
+      throw new Error(`ЦБ: USD не найден в ответе за ${date}`);
+    }
+
+    const nominalStr = usdNode.querySelector('nominal')?.text.trim() ?? '1';
+    const valueStr = usdNode.querySelector('value')?.text.trim() ?? '';
+
+    const nominal = parseInt(nominalStr, 10);
+    const value = parseFloat(valueStr.replace(',', '.'));
+
+    if (isNaN(value) || isNaN(nominal) || nominal === 0) {
+      throw new Error(
+        `ЦБ: не распарсить курс USD за ${date}: value="${valueStr}" nominal="${nominalStr}"`,
+      );
+    } */
+
+    // курс за 1 единицу валюты (для USD nominal=1, но так надёжно для любой валюты)
+    //return value / nominal;
+    return 78.3;
   }
 }

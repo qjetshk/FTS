@@ -67,7 +67,7 @@ export function ProductRow({ product, gridCols, variant, pending, onTnvedSelect,
             />
           : <span className="text-xs truncate">{product.country}</span>}
       </div>
-      <div className="flex items-center p-2 overflow-hidden font-mono text-muted-foreground text-xs">{product.offerId}</div>
+      <div className="flex items-center p-2 overflow-hidden"><TCell value={product.offerId} mono muted /></div>
       <div className="flex items-center p-2 overflow-hidden"><span className="text-xs font-mono text-muted-foreground truncate">{product.sku}</span></div>
       <div className="flex items-center p-2 overflow-hidden">
         {showTnvedPopup ? (

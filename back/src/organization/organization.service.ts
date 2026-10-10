@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import axios from 'axios';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
@@ -166,7 +167,6 @@ export class OrganizationService {
   }
 
   classify(clientId: string): void {
-    const n8nUrl = this.config.getOrThrow<string>('N8N_URL');
     this.prisma.organization
       .findUnique({
         where: { ozonClientId: Number(clientId) },
@@ -174,16 +174,22 @@ export class OrganizationService {
       })
       .then((org) => {
         if (!org) return;
-        fetch(`${n8nUrl}/webhook/classify_TNVED`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.n8nToken()}`,
-          },
-          body: JSON.stringify({ client_id: clientId, api_key: org.ozonApiKey }),
-        });
+        return this.triggerClassify(clientId, org.ozonApiKey);
       })
       .catch(() => {});
+  }
+
+  async triggerClassify(clientId: string, apiKey: string): Promise<void> {
+    const n8nUrl = this.config.getOrThrow<string>('N8N_URL');
+    // вебхук отвечает по завершении прогона (часы на больших каталогах) — у fetch лимит 5 мин на заголовки, поэтому axios
+    await axios.post(
+      `${n8nUrl}/webhook/classify_TNVED`,
+      { client_id: clientId, api_key: apiKey },
+      {
+        headers: { Authorization: `Bearer ${this.n8nToken()}` },
+        timeout: 3 * 60 * 60 * 1000,
+      },
+    );
   }
 
   async updateOrganization(dto: UpdateOrganizationDto) {
