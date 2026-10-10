@@ -12,7 +12,7 @@ export class EmailService {
 
   constructor() {
     this.resend = new Resend(process.env.RESEND_API_KEY);
-    this.from = process.env.EMAIL_FROM ?? 'FTS <noreply@fts.ru>';
+    this.from = process.env.EMAIL_FROM ?? 'easyfts <noreply@easyfts.ru>';
   }
 
   // возвращает id письма в Resend — по нему его видно в дашборде Resend
@@ -33,14 +33,14 @@ export class EmailService {
     switch (name) {
       case 'welcome': {
         return {
-          subject: 'Добро пожаловать в FTS!',
+          subject: 'Добро пожаловать в easyfts!',
           html: await render(WelcomeEmail()),
         };
       }
       case 'login-code': {
         const d = data as EmailJobData<'login-code'>;
         return {
-          subject: `${d.code} — код для входа в FTS`,
+          subject: `${d.code} — код для входа в easyfts`,
           html: await render(LoginCodeTemplate({ code: d.code })),
         };
       }
