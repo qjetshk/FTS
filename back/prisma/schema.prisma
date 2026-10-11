@@ -210,6 +210,8 @@ model StatFormRun {
   organizationId String     @map("organization_id")
   period         String // 'YYYY-MM'
   status         RUN_STATUS @default(PENDING)
+  // текущий шаг генерации (пока status = BUILDING) — показывается юзеру в реальном времени
+  stage          RUN_STAGE?
 
   detectedCountries   String[]  @map("detected_countries")
   countriesDetectedAt DateTime? @map("countries_detected_at")
@@ -254,6 +256,16 @@ enum RUN_STATUS {
   READY
   PARTIAL
   FAILED
+  // генерация остановлена: у товаров из отправок нет кода ТН ВЭД / код требует проверки
+  NEEDS_REVIEW
+}
+
+// шаги генерации: STARTED и FILLING ставит бэк, REQUESTING_REPORT / REPORT_RECEIVED — n8n
+enum RUN_STAGE {
+  STARTED
+  REQUESTING_REPORT
+  REPORT_RECEIVED
+  FILLING
 }
 
 enum STAT_FORM_STATUS {

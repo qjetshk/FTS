@@ -133,6 +133,7 @@ Table stat_form_runs {
   organizationId String [not null]
   period String [not null]
   status RUN_STATUS [not null, default: 'PENDING']
+  stage RUN_STAGE
   detectedCountries String[] [not null]
   countriesDetectedAt DateTime
   completedAt DateTime
@@ -191,6 +192,14 @@ Enum RUN_STATUS {
   READY
   PARTIAL
   FAILED
+  NEEDS_REVIEW
+}
+
+Enum RUN_STAGE {
+  STARTED
+  REQUESTING_REPORT
+  REPORT_RECEIVED
+  FILLING
 }
 
 Enum STAT_FORM_STATUS {

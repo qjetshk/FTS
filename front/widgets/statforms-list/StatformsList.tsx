@@ -3,10 +3,13 @@
 import { FileSpreadsheet } from "lucide-react"
 import { Accordion, Skeleton } from "@/shared/ui"
 import { useGetStatformRunsQuery } from "@/entities/statform"
+import { useStatformRunEvents } from "@/features/watch-statform-runs"
 import { StatFormRunItem } from "./StatFormRunItem"
 
 export function StatformsList() {
   const { data, isLoading } = useGetStatformRunsQuery()
+  // статусы прогонов обновляются в реальном времени, без перезагрузки страницы
+  useStatformRunEvents()
 
   if (isLoading) {
     return (

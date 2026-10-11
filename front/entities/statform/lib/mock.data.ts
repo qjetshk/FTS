@@ -5,6 +5,7 @@ export const MOCK_RUNS: StatFormRun[] = [
     id: "r1",
     period: "2026-05",
     status: "READY",
+    stage: null,
     createdAt: "2026-06-01T06:00:00Z",
     completedAt: "2026-06-01T06:03:22Z",
     statForms: [
@@ -18,6 +19,7 @@ export const MOCK_RUNS: StatFormRun[] = [
     id: "r2",
     period: "2026-04",
     status: "PARTIAL",
+    stage: null,
     createdAt: "2026-05-01T06:00:00Z",
     completedAt: "2026-05-01T06:02:50Z",
     statForms: [
@@ -29,6 +31,7 @@ export const MOCK_RUNS: StatFormRun[] = [
     id: "r3",
     period: "2026-03",
     status: "FAILED",
+    stage: null,
     createdAt: "2026-04-01T06:00:00Z",
     failureReason: "OZON API недоступен",
     statForms: [],

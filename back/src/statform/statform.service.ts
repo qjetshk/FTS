@@ -1,4 +1,7 @@
 import {
+  ConflictException,
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   NotFoundException,
@@ -11,8 +14,21 @@ import { buildStatFormXml } from './statform.builder';
 import { CreateStatformDto } from './dto/create-statform.dto';
 import { decrypt, encrypt, EncryptedPayload } from 'src/utils/crypto.util';
 import { CbrService, CbrUnavailableError } from './cbr.service';
-import type { StatformFailCause } from '../notification/notification.events';
+import type { ReviewProductItem, StatformFailCause } from '../notification/notification.events';
+import { RunEventsService, RUN_VIEW } from './run-events.service';
+import { RedisService } from 'src/redis/redis.service';
+import type { RUN_STAGE } from '@prisma/client';
 import { StatformProducer } from './statform.producer';
+
+const STALE_RUN_MS = 30 * 60 * 1000;
+const MANUAL_RUNS_LIMIT = 2;
+const MANUAL_RUNS_WINDOW = 60 * 60;
+
+// '2026-09' → 'сентябрь 2026'
+const formatPeriodRu = (period: string) => {
+  const [year, month] = period.split('-').map(Number);
+  return `${new Intl.DateTimeFormat('ru-RU', { month: 'long' }).format(new Date(year, month - 1, 1))} ${year}`;
+};
 
 // BY + 2026-09 → BY_statform_09-26.xml
 export const statformFilename = (country: string, period: string) => {
@@ -29,6 +45,8 @@ export class StatformService {
     private readonly cbr: CbrService,
     private readonly producer: StatformProducer,
     private readonly notifications: NotificationService,
+    private readonly runEvents: RunEventsService,
+    private readonly redis: RedisService,
   ) {}
 
   async createStatform(dto: CreateStatformDto) {
@@ -107,8 +125,8 @@ export class StatformService {
     // ── 7. Найти или создать StatFormRun для (organizationId, period) ─────────
     const run = await this.prisma.statFormRun.upsert({
       where: { organizationId_period: { organizationId, period } },
-      create: { organizationId, period },
-      update: {},
+      create: { organizationId, period, status: 'BUILDING', stage: 'FILLING' },
+      update: { stage: 'FILLING' },
     });
 
     // ── 8. Upsert StatForm по (runId, country) ────────────────────────────────
@@ -130,6 +148,7 @@ export class StatformService {
       },
     });
 
+    await this.runEvents.emit(run.id);
     return { id: statform.id, runId: run.id, country, period };
   }
 
@@ -153,17 +172,7 @@ export class StatformService {
   async getStatforms(organizationId: string) {
     return this.prisma.statFormRun.findMany({
       where: { organizationId },
-      include: {
-        statForms: {
-          select: {
-            id: true,
-            country: true,
-            status: true,
-            itemsCount: true,
-            completedAt: true,
-          },
-        },
-      },
+      include: RUN_VIEW,
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -178,7 +187,50 @@ export class StatformService {
   }
 
   // ── Поставить задачу генерации в очередь (ручной запуск) ─────────────────
+  // Защита от спама кнопкой/API: одна активная генерация на период + лимит запусков в час на организацию
   async runStatform(org: { id: string; ozonClientId: number; ozonApiKey: string }, period: string) {
+    const label = formatPeriodRu(period);
+
+    // мьютекс на проверку+блокировку: два одновременных запроса не проскочат оба
+    const lockKey = `statform:run-lock:${org.id}:${period}`;
+    if (!(await this.redis.setIfAbsent(lockKey, '1', 10))) {
+      throw new ConflictException(`Генерация за ${label} уже запускается`);
+    }
+
+    try {
+      const current = await this.prisma.statFormRun.findUnique({
+        where: { organizationId_period: { organizationId: org.id, period } },
+        select: { status: true, updatedAt: true },
+      });
+      const active = current && (current.status === 'PENDING' || current.status === 'BUILDING');
+      // прогон без изменений дольше STALE_RUN_MS считаем зависшим (n8n упал молча) — его можно перезапустить
+      if (active && Date.now() - current.updatedAt.getTime() < STALE_RUN_MS) {
+        throw new ConflictException(`Генерация за ${label} уже идёт — дождитесь завершения`);
+      }
+
+      const limitKey = `statform:manual-runs:${org.id}`;
+      if ((await this.redis.incrWindow(limitKey, MANUAL_RUNS_WINDOW)) > MANUAL_RUNS_LIMIT) {
+        const retryAfter = await this.redis.ttl(limitKey);
+        throw new HttpException(
+          {
+            message: `Слишком много запусков генерации. Попробуйте через ${Math.ceil(retryAfter / 60)} мин.`,
+            retryAfter,
+          },
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+
+      // сразу помечаем прогон «в очереди» — дальше кнопка заблокирована, юзер видит статус
+      const run = await this.prisma.statFormRun.upsert({
+        where: { organizationId_period: { organizationId: org.id, period } },
+        create: { organizationId: org.id, period, status: 'PENDING' },
+        update: { status: 'PENDING', stage: null, failureReason: null },
+      });
+      await this.runEvents.emit(run.id);
+    } finally {
+      await this.redis.del(lockKey);
+    }
+
     await this.producer.enqueue({
       organizationId: org.id,
       ozonClientId: org.ozonClientId,
@@ -190,25 +242,49 @@ export class StatformService {
     return { queued: true, period };
   }
 
-  // ── Коллбэки от n8n — обновить статус рана ───────────────────────────────
+  // ── Коллбэки от n8n — шаги и итог прогона ────────────────────────────────
+
+  // n8n знает client_id из вебхука, внутренние вызовы — organizationId
+  async resolveOrgId(ref: { organizationId?: string; clientId?: number }): Promise<string> {
+    if (ref.organizationId) return ref.organizationId;
+    const org = await this.prisma.organization.findUnique({
+      where: { ozonClientId: ref.clientId },
+      select: { id: true },
+    });
+    if (!org) throw new NotFoundException(`Организация с clientId ${ref.clientId} не найдена`);
+    return org.id;
+  }
+
+  // промежуточный шаг; на завершённый прогон не действует (поздний колбэк не «оживит» его)
+  async setStage(organizationId: string, period: string, stage: RUN_STAGE) {
+    const run = await this.prisma.statFormRun.findUnique({
+      where: { organizationId_period: { organizationId, period } },
+      select: { id: true, status: true },
+    });
+    if (!run || run.status !== 'BUILDING') return;
+
+    await this.prisma.statFormRun.update({ where: { id: run.id }, data: { stage } });
+    await this.runEvents.emit(run.id);
+  }
+
   async completeRun(organizationId: string, period: string) {
     this.logger.log(`completeRun: org=${organizationId} period=${period}`);
     const run = await this.prisma.statFormRun.findUnique({
       where: { organizationId_period: { organizationId, period } },
       include: { statForms: { select: { id: true, status: true, country: true } } },
     });
-    // прогон уже провален в этом запуске (например, нет курса ЦБ) — не перетираем FAILED на READY;
+    // прогон уже завершился ошибкой в этом запуске (нет курса ЦБ, товары на проверку) — не перетираем на READY;
     // при новом запуске процессор сам переводит его в BUILDING
-    if (!run || run.status === 'FAILED' || run.statForms.length === 0) return;
+    if (!run || run.status !== 'BUILDING' || run.statForms.length === 0) return;
 
     const hasFailed = run.statForms.some((f) => f.status === 'FAILED');
-    const allReady = run.statForms.every((f) => f.status === 'READY');
-    const status = allReady ? 'READY' : hasFailed ? 'PARTIAL' : 'READY';
+    const status = hasFailed ? 'PARTIAL' : 'READY';
 
     await this.prisma.statFormRun.update({
       where: { id: run.id },
-      data: { status, completedAt: new Date() },
+      data: { status, stage: null, completedAt: new Date() },
     });
+    await this.runEvents.emit(run.id);
 
     const ready = run.statForms.filter((f) => f.status === 'READY');
     if (ready.length === 0) return;
@@ -229,15 +305,35 @@ export class StatformService {
       .catch((e) => this.logger.error(`statform.ready notify failed: ${e.message}`));
   }
 
+  // reason — человекочитаемая причина на русском: видна юзеру на странице и в письме
   async failRun(organizationId: string, period: string, reason?: string, cause?: StatformFailCause) {
     const run = await this.prisma.statFormRun.upsert({
       where: { organizationId_period: { organizationId, period } },
       create: { organizationId, period, status: 'FAILED', failureReason: reason ?? null },
-      update: { status: 'FAILED', failureReason: reason ?? null },
+      update: { status: 'FAILED', stage: null, failureReason: reason ?? null },
     });
+    await this.runEvents.emit(run.id);
 
     this.notifications
-      .notify(organizationId, 'statform.failed', { period, ...(cause && { cause }) }, run.id)
+      .notify(organizationId, 'statform.failed', { period, ...(cause && { cause }), ...(reason && { reason }) }, run.id)
       .catch((e) => this.logger.error(`statform.failed notify failed: ${e.message}`));
+  }
+
+  // генерация остановлена: у товаров из отправок нет кода ТН ВЭД или он требует проверки
+  async needsReviewRun(organizationId: string, period: string, products: ReviewProductItem[]) {
+    const run = await this.prisma.statFormRun.upsert({
+      where: { organizationId_period: { organizationId, period } },
+      create: { organizationId, period, status: 'NEEDS_REVIEW' },
+      update: {
+        status: 'NEEDS_REVIEW',
+        stage: null,
+        failureReason: `Проверьте коды ТН ВЭД у ${products.length} товаров из отправок и запустите генерацию заново`,
+      },
+    });
+    await this.runEvents.emit(run.id);
+
+    this.notifications
+      .notify(organizationId, 'products.need-review', { period, products }, run.id)
+      .catch((e) => this.logger.error(`products.need-review notify failed: ${e.message}`));
   }
 }

@@ -7,10 +7,11 @@ type Props = {
   orgName: string;
   period: string;
   cause?: 'rate_unavailable';
+  reason?: string;
   actionUrl: string;
 };
 
-export function StatformFailedTemplate({ name, orgName, period, cause, actionUrl }: Props) {
+export function StatformFailedTemplate({ name, orgName, period, cause, reason, actionUrl }: Props) {
   const periodLabel = formatPeriod(period);
   return (
     <EmailLayout
@@ -35,6 +36,7 @@ export function StatformFailedTemplate({ name, orgName, period, cause, actionUrl
           <Text style={styles.text}>
             При формировании статистических форм за {periodLabel} для {orgName} произошла ошибка.
           </Text>
+          {reason && <Text style={styles.text}>Причина: {reason}</Text>}
           <Text style={styles.text}>
             Попробуйте запустить формирование заново. Если ошибка повторится — напишите нам, разберёмся.
           </Text>

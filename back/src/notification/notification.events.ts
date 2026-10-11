@@ -49,6 +49,12 @@ export class StatformFailedPayload {
   @IsOptional()
   @IsIn(STATFORM_FAIL_CAUSES)
   cause?: StatformFailCause;
+
+  // причина на русском из колбэка n8n — показывается в письме
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reason?: string;
 }
 
 // формат = items из ноды «Check NEEDS_REVIEW» воркфлоу статформ в n8n

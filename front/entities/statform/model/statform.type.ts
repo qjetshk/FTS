@@ -1,5 +1,7 @@
-export type StatFormRunStatus = "BUILDING" | "READY" | "PARTIAL" | "FAILED"
-export type StatFormStatus = "READY" | "FAILED" | "BUILDING"
+export type StatFormRunStatus = "PENDING" | "BUILDING" | "READY" | "PARTIAL" | "FAILED" | "NEEDS_REVIEW"
+// шаги генерации, пока status = BUILDING
+export type StatFormRunStage = "STARTED" | "REQUESTING_REPORT" | "REPORT_RECEIVED" | "FILLING"
+export type StatFormStatus = "PENDING" | "READY" | "FAILED" | "BUILDING"
 
 export type StatForm = {
   id: string
@@ -13,9 +15,10 @@ export type StatFormRun = {
   id: string
   period: string
   status: StatFormRunStatus
+  stage: StatFormRunStage | null
   createdAt: string
   completedAt?: string
-  failureReason?: string
+  failureReason?: string | null
   statForms: StatForm[]
 }
 

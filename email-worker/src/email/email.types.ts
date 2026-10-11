@@ -15,7 +15,7 @@ export type EmailJobMap = {
   'welcome': { to: string };
   'login-code': { to: string; code: string };
   'statform.ready': NotificationBase & { period: string; countries: string[]; statformIds: string[]; partial: boolean };
-  'statform.failed': NotificationBase & { period: string; cause?: 'rate_unavailable' };
+  'statform.failed': NotificationBase & { period: string; cause?: 'rate_unavailable'; reason?: string };
   'products.need-review': NotificationBase & { period: string; products: ReviewProduct[] };
   'ozon.api-error': NotificationBase & { reason?: string };
 };

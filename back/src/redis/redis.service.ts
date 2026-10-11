@@ -31,6 +31,11 @@ export class RedisService {
     await this.client.set(key, value, 'KEEPTTL');
   }
 
+  // атомарно «занять» ключ: true — заняли, false — уже занят (короткий мьютекс между параллельными запросами)
+  async setIfAbsent(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+    return (await this.client.set(key, value, 'EX', ttlSeconds, 'NX')) === 'OK';
+  }
+
   async del(key: string): Promise<void> {
     await this.client.del(key);
   }
