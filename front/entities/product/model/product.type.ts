@@ -37,6 +37,7 @@ export type ProductSnapshot = {
   name: string
   categoryPath: string
   tnvedStatus: TnvedStatus | null
+  tnvedCode: string | null
   country: string | null
   countryConflict: boolean
 }

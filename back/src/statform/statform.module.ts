@@ -9,9 +9,10 @@ import { CbrService } from './cbr.service';
 import { ApiKeyGuard } from 'src/guards/api-key.guard';
 import { JwtAuthGuard } from 'src/guards/jwt.guard';
 import { QUEUE_STATFORM } from '../queue/queue.constants';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
-  imports: [BullModule.registerQueue({ name: QUEUE_STATFORM })],
+  imports: [BullModule.registerQueue({ name: QUEUE_STATFORM }), NotificationModule],
   controllers: [StatformController],
   providers: [StatformService, StatformProducer, StatformProcessor, StatformCron, CbrService, ApiKeyGuard, JwtAuthGuard],
 })

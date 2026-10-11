@@ -1,12 +1,13 @@
 import { Controller, Get, HttpCode, HttpStatus, Query, UseGuards } from '@nestjs/common';
 import { TnvedService } from './tnved.service';
 import { JwtAuthGuard } from 'src/guards/jwt.guard';
-import { IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class SearchTnvedDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(200)
   q!: string;
 
   @IsOptional()
@@ -19,6 +20,7 @@ class SearchTnvedDto {
   @Type(() => Number)
   @IsNumber()
   @Min(1)
+  @Max(50)
   limit?: number = 20;
 }
 

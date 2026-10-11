@@ -6,6 +6,8 @@ import { QUEUE_EMAIL } from 'src/queue/queue.constants';
 // a***@gmail.com — адрес в логах без полного раскрытия
 const maskEmail = (email: string) => email.replace(/^(.).*(@.*)$/, '$1***$2');
 
+export type EnqueueResult = { jobId?: string; deduplicated: boolean };
+
 @Injectable()
 export class EmailProducerService {
   private readonly logger = new Logger(EmailProducerService.name);
@@ -21,8 +23,28 @@ export class EmailProducerService {
     await this.enqueue('login-code', { to, code }, { attempts: 3, backoff: { type: 'fixed', delay: 5_000 } });
   }
 
-  private async enqueue<T extends { to: string }>(name: string, data: T, opts?: JobsOptions) {
+  // имя задачи = имя события = шаблон в email-worker
+  async sendNotification(
+    event: string,
+    data: { to: string } & Record<string, unknown>,
+    deduplication?: { id: string; ttl: number },
+  ): Promise<EnqueueResult> {
+    return this.enqueue(event, data, deduplication && { deduplication });
+  }
+
+  private async enqueue<T extends { to: string }>(name: string, data: T, opts?: JobsOptions): Promise<EnqueueResult> {
+    const addedAt = Date.now();
     const job = await this.queue.add(name, data, opts);
-    this.logger.log(`Enqueued: id=${job.id} type=${name} to=${maskEmail(data.to)}`);
+    const to = maskEmail(data.to);
+
+    // при совпадении deduplication.id BullMQ не создаёт задачу, а возвращает уже существующую
+    if (opts?.deduplication && job.timestamp < addedAt) {
+      this.logger.log(`Deduplicated: type=${name} to=${to} dedup=${opts.deduplication.id} — already queued as job id=${job.id}`);
+      return { jobId: job.id, deduplicated: true };
+    }
+
+    const dedup = opts?.deduplication ? ` dedup=${opts.deduplication.id}` : '';
+    this.logger.log(`Enqueued: id=${job.id} type=${name} to=${to}${dedup}`);
+    return { jobId: job.id, deduplicated: false };
   }
 }

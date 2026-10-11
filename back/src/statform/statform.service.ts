@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { NotificationService } from '../notification/notification.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { buildStatFormXml } from './statform.builder';
 import { CreateStatformDto } from './dto/create-statform.dto';
@@ -8,10 +9,13 @@ import { StatformProducer } from './statform.producer';
 
 @Injectable()
 export class StatformService {
+  private readonly logger = new Logger(StatformService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly cbr: CbrService,
     private readonly producer: StatformProducer,
+    private readonly notifications: NotificationService,
   ) {}
 
   async createStatform(dto: CreateStatformDto) {
@@ -35,16 +39,26 @@ export class StatformService {
     // ── 3. tnvedMap из products по sku ────────────────────────────────────────
     const skus = [...new Set(orders.map((o) => Number(o.sku)))];
     const products = await this.prisma.product.findMany({
-      where: {
-        sku: { in: skus },
-        organizationId,
-        tnvedCode: { not: null },
-      },
-      select: { sku: true, tnvedCode: true, tnvedName: true, tnvedUnit: true },
+      where: { sku: { in: skus }, organizationId },
+      select: { sku: true, name: true, tnvedCode: true, tnvedName: true, tnvedUnit: true },
     });
 
+    // Без кода ТН ВЭД товар не попадёт в GoodsInfo, а его договор/инвойс попадёт в Documents —
+    // форма выйдет неполной. Не собираем её вообще, отдаём n8n список проблемных SKU.
+    const withCode = products.filter((p) => p.tnvedCode);
+    const missing = skus
+      .filter((sku) => !withCode.some((p) => p.sku === sku))
+      .map((sku) => ({ sku: String(sku), name: products.find((p) => p.sku === sku)?.name ?? null }));
+    if (missing.length) {
+      this.logger.warn(`createStatform blocked: org=${organizationId} ${country} ${period}, no tnved for ${missing.length} sku`);
+      throw new UnprocessableEntityException({
+        message: `Нет кода ТН ВЭД у ${missing.length} товаров из отправок`,
+        missing,
+      });
+    }
+
     const tnvedMap = Object.fromEntries(
-      products.map((p) => [p.sku, { code: p.tnvedCode!, name: p.tnvedName!, unit: p.tnvedUnit ?? null }]),
+      withCode.map((p) => [p.sku, { code: p.tnvedCode!, name: p.tnvedName!, unit: p.tnvedUnit ?? null }]),
     );
 
     // ── 4. Курс USD с ЦБ РФ на первое число отчётного месяца ─────────────────
@@ -152,10 +166,10 @@ export class StatformService {
 
   // ── Коллбэки от n8n — обновить статус рана ───────────────────────────────
   async completeRun(organizationId: string, period: string) {
-    console.log(`[completeRun] called: org=${organizationId} period=${period}`);
+    this.logger.log(`completeRun: org=${organizationId} period=${period}`);
     const run = await this.prisma.statFormRun.findUnique({
       where: { organizationId_period: { organizationId, period } },
-      include: { statForms: { select: { status: true } } },
+      include: { statForms: { select: { status: true, country: true } } },
     });
     if (!run) return;
 
@@ -167,12 +181,24 @@ export class StatformService {
       where: { id: run.id },
       data: { status, completedAt: new Date() },
     });
+
+    const countries = run.statForms.filter((f) => f.status === 'READY').map((f) => f.country);
+    if (countries.length === 0) return;
+
+    // уведомление не должно ломать колбэк n8n
+    this.notifications
+      .notify(organizationId, 'statform.ready', { period, countries, partial: status === 'PARTIAL' }, run.id)
+      .catch((e) => this.logger.error(`statform.ready notify failed: ${e.message}`));
   }
 
   async failRun(organizationId: string, period: string, reason?: string) {
-    await this.prisma.statFormRun.update({
+    const run = await this.prisma.statFormRun.update({
       where: { organizationId_period: { organizationId, period } },
       data: { status: 'FAILED', failureReason: reason ?? null },
     });
+
+    this.notifications
+      .notify(organizationId, 'statform.failed', { period }, run.id)
+      .catch((e) => this.logger.error(`statform.failed notify failed: ${e.message}`));
   }
 }

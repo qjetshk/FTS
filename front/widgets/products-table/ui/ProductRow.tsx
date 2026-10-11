@@ -18,7 +18,8 @@ type Props = {
 
 export function ProductRow({ product, gridCols, variant, pending, onTnvedSelect, pendingCountry, onCountrySelect }: Props) {
   const countryIssue = product.countryConflict || !product.country
-  const showTnvedPopup = !!product.tnvedStatus && product.tnvedStatus !== "VERIFIED_BY_USER"
+  // без кода выбрать его можно всегда, даже если статус уже «подтверждён»
+  const showTnvedPopup = !product.tnvedCode || (!!product.tnvedStatus && product.tnvedStatus !== "VERIFIED_BY_USER")
 
   const effectiveCode = pending?.tnvedCode ?? product.tnvedCode
   const effectiveName = pending ? pending.tnvedName : product.tnvedName

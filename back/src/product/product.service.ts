@@ -142,6 +142,7 @@ export class ProductService {
         name: true,
         categoryPath: true,
         tnvedStatus: true,
+        tnvedCode: true,
         country: true,
         countryConflict: true,
       },

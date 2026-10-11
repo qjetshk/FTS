@@ -1,17 +1,23 @@
 export const EMAIL_QUEUE = 'email';
 
-export type WelcomeJobData = {
+// Поля, которые бэк кладёт в каждое уведомление (NotificationService)
+type NotificationBase = {
   to: string;
+  name: string | null;
+  orgName: string;
+  actionUrl: string;
 };
 
-export type LoginCodeJobData = {
-  to: string;
-  code: string;
-};
+export type ReviewProduct = { sku: string; name: string };
 
+// Имя задачи в очереди = имя события на бэке (src/notification/notification.events.ts)
 export type EmailJobMap = {
-  'welcome': WelcomeJobData;
-  'login-code': LoginCodeJobData;
+  'welcome': { to: string };
+  'login-code': { to: string; code: string };
+  'statform.ready': NotificationBase & { period: string; countries: string[]; partial: boolean };
+  'statform.failed': NotificationBase & { period: string };
+  'products.need-review': NotificationBase & { period: string; products: ReviewProduct[] };
+  'ozon.api-error': NotificationBase & { reason?: string };
 };
 
 export type EmailJobName = keyof EmailJobMap;

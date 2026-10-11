@@ -38,7 +38,7 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
 
   // Consider pending selections as effectively resolved
   const effectiveNeedsAttention = snapshot.filter(p => {
-    const tnvedOk = !!pendingTnved[p.productId] || p.tnvedStatus !== "NEEDS_REVIEW"
+    const tnvedOk = !!pendingTnved[p.productId] || (p.tnvedStatus !== "NEEDS_REVIEW" && !!p.tnvedCode)
     const countryOk = !!pendingCountry[p.productId] || (!p.countryConflict && !!p.country)
     return !tnvedOk || !countryOk
   }).length

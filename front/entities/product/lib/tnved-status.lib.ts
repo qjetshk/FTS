@@ -26,10 +26,18 @@ export const TNVED_STATUS_CONFIG: Record<
   },
 }
 
-export function isNeedsAttention(product: { tnvedStatus: TnvedStatus | null; countryConflict: boolean; country: string | null }) {
-  return product.tnvedStatus === "NEEDS_REVIEW" || product.countryConflict || !product.country
+type AttentionFields = {
+  tnvedStatus: TnvedStatus | null
+  tnvedCode: string | null
+  countryConflict: boolean
+  country: string | null
 }
 
-export function isGreen(product: { tnvedStatus: TnvedStatus | null; countryConflict: boolean; country: string | null }) {
+// Без кода ТН ВЭД статформа не соберётся — такой товар всегда требует внимания, какой бы ни был статус
+export function isNeedsAttention(product: AttentionFields) {
+  return product.tnvedStatus === "NEEDS_REVIEW" || !product.tnvedCode || product.countryConflict || !product.country
+}
+
+export function isGreen(product: AttentionFields) {
   return !isNeedsAttention(product) && product.tnvedStatus !== null
 }

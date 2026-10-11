@@ -35,8 +35,8 @@ export function ProductsTable({ clientId, className, showClassificationProgress 
   })
 
   const allItems = data?.items ?? []
-  const badItems = allItems.filter(p => isNeedsAttention({ tnvedStatus: p.tnvedStatus, countryConflict: p.countryConflict, country: p.country }))
-  const goodItems = allItems.filter(p => !isNeedsAttention({ tnvedStatus: p.tnvedStatus, countryConflict: p.countryConflict, country: p.country }))
+  const badItems = allItems.filter(p => isNeedsAttention(p))
+  const goodItems = allItems.filter(p => !isNeedsAttention(p))
   const totalGoodPages = Math.ceil(goodItems.length / MAIN_LIMIT)
   const pageItems = goodItems.slice((mainPage - 1) * MAIN_LIMIT, mainPage * MAIN_LIMIT)
   const nullCount = snapshot.filter(p => p.tnvedStatus === null).length
