@@ -22,10 +22,11 @@ export class EmailProcessor extends WorkerHost {
     this.logger.log(`Job received: id=${job.id} type=${job.name} to=${to} attempt=${attempt}`);
     await job.log(`attempt ${attempt}: sending "${job.name}" to ${to}`);
 
-    const resendId = await this.emailService.send(job.name, job.data);
+    const { resendId, attachments } = await this.emailService.send(job.name, job.data);
 
-    this.logger.log(`Sent: id=${job.id} type=${job.name} to=${to} resendId=${resendId}`);
-    await job.log(`sent, resend id=${resendId}`);
+    const files = attachments ? ` attachments=${attachments}` : '';
+    this.logger.log(`Sent: id=${job.id} type=${job.name} to=${to}${files} resendId=${resendId}`);
+    await job.log(`sent${files}, resend id=${resendId}`);
   }
 
   @OnWorkerEvent('ready')

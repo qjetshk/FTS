@@ -28,14 +28,27 @@ export class StatformReadyPayload {
   @IsIn(COUNTRIES, { each: true })
   countries!: string[];
 
+  // готовые формы — email-worker прикладывает их XML к письму
+  @IsArray()
+  @IsString({ each: true })
+  statformIds!: string[];
+
   // часть стран не сформировалась
   @IsBoolean()
   partial!: boolean;
 }
 
+// известные причины сбоя — от них зависит текст письма; без cause — общая ошибка
+export const STATFORM_FAIL_CAUSES = ['rate_unavailable'] as const;
+export type StatformFailCause = (typeof STATFORM_FAIL_CAUSES)[number];
+
 export class StatformFailedPayload {
   @Matches(PERIOD, { message: 'period must be YYYY-MM' })
   period!: string;
+
+  @IsOptional()
+  @IsIn(STATFORM_FAIL_CAUSES)
+  cause?: StatformFailCause;
 }
 
 // формат = items из ноды «Check NEEDS_REVIEW» воркфлоу статформ в n8n

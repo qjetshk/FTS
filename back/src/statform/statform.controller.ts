@@ -82,10 +82,17 @@ export class StatformController {
     @Res() res: Response,
   ) {
     const org = await this.statformService.getOrgByUserId(user.id);
-    const xml = await this.statformService.getStatformXml(id, org.id);
+    const { filename, content } = await this.statformService.getStatformFile(id, org.id);
 
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="statform-${id}.xml"`);
-    res.send(xml);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(content);
+  }
+
+  // ── Вызывается email-worker — XML для вложения в письмо «статформы готовы» ──
+  @Get('internal/:id/file')
+  @UseGuards(ApiKeyGuard)
+  async getStatformFileInternal(@Param('id') id: string) {
+    return this.statformService.getStatformFile(id);
   }
 }

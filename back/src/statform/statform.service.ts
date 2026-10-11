@@ -1,11 +1,24 @@
-import { Injectable, Logger, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { NotificationService } from '../notification/notification.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { buildStatFormXml } from './statform.builder';
 import { CreateStatformDto } from './dto/create-statform.dto';
 import { decrypt, encrypt, EncryptedPayload } from 'src/utils/crypto.util';
-import { CbrService } from './cbr.service';
+import { CbrService, CbrUnavailableError } from './cbr.service';
+import type { StatformFailCause } from '../notification/notification.events';
 import { StatformProducer } from './statform.producer';
+
+// BY + 2026-09 → BY_statform_09-26.xml
+export const statformFilename = (country: string, period: string) => {
+  const [year, month] = period.split('-');
+  return `${country}_statform_${month}-${year.slice(2)}.xml`;
+};
 
 @Injectable()
 export class StatformService {
@@ -64,7 +77,15 @@ export class StatformService {
     // ── 4. Курс USD с ЦБ РФ на первое число отчётного месяца ─────────────────
     const [year, month] = period.split('-');
     const cbrDate = `01.${month}.${year}`;
-    const usdRate = await this.cbr.getUsdRate(cbrDate);
+    let usdRate: number;
+    try {
+      usdRate = await this.cbr.getUsdRate(cbrDate);
+    } catch (e) {
+      if (!(e instanceof CbrUnavailableError)) throw e;
+      // ни ЦБ, ни зеркало не ответили — останавливаем прогон, юзер получит письмо «подождите и запустите заново»
+      await this.failRun(organizationId, period, e.message, 'rate_unavailable');
+      throw new ServiceUnavailableException(e.message);
+    }
 
     // ── 5. Генерация XML ──────────────────────────────────────────────────────
     const xml = await buildStatFormXml({
@@ -113,14 +134,19 @@ export class StatformService {
   }
 
   // ── Скачать расшифрованный XML ────────────────────────────────────────────
-  async getStatformXml(id: string, organizationId: string): Promise<string> {
+  // organizationId не передаётся только из внутреннего эндпоинта (email-worker), там доступ проверяет ApiKeyGuard
+  async getStatformFile(id: string, organizationId?: string): Promise<{ filename: string; content: string }> {
     const statform = await this.prisma.statForm.findFirst({
-      where: { id, run: { organizationId } },
+      where: { id, ...(organizationId && { run: { organizationId } }), status: 'READY' },
+      select: { country: true, encryptedXml: true, run: { select: { period: true } } },
     });
-    if (!statform) throw new NotFoundException('Statform not found');
+    if (!statform?.encryptedXml) throw new NotFoundException('Statform not found');
 
     const key = Buffer.from(process.env.XML_ENCRYPTION_KEY!, 'hex');
-    return decrypt(statform.encryptedXml as unknown as EncryptedPayload, key);
+    return {
+      filename: statformFilename(statform.country, statform.run.period),
+      content: decrypt(statform.encryptedXml as unknown as EncryptedPayload, key),
+    };
   }
 
   // ── Список ранов организации со статформами ───────────────────────────────
@@ -169,9 +195,11 @@ export class StatformService {
     this.logger.log(`completeRun: org=${organizationId} period=${period}`);
     const run = await this.prisma.statFormRun.findUnique({
       where: { organizationId_period: { organizationId, period } },
-      include: { statForms: { select: { status: true, country: true } } },
+      include: { statForms: { select: { id: true, status: true, country: true } } },
     });
-    if (!run) return;
+    // прогон уже провален в этом запуске (например, нет курса ЦБ) — не перетираем FAILED на READY;
+    // при новом запуске процессор сам переводит его в BUILDING
+    if (!run || run.status === 'FAILED' || run.statForms.length === 0) return;
 
     const hasFailed = run.statForms.some((f) => f.status === 'FAILED');
     const allReady = run.statForms.every((f) => f.status === 'READY');
@@ -182,23 +210,34 @@ export class StatformService {
       data: { status, completedAt: new Date() },
     });
 
-    const countries = run.statForms.filter((f) => f.status === 'READY').map((f) => f.country);
-    if (countries.length === 0) return;
+    const ready = run.statForms.filter((f) => f.status === 'READY');
+    if (ready.length === 0) return;
 
-    // уведомление не должно ломать колбэк n8n
+    // уведомление не должно ломать колбэк n8n; XML воркер подтянет сам по statformIds (в очередь ПДн не кладём)
     this.notifications
-      .notify(organizationId, 'statform.ready', { period, countries, partial: status === 'PARTIAL' }, run.id)
+      .notify(
+        organizationId,
+        'statform.ready',
+        {
+          period,
+          countries: ready.map((f) => f.country),
+          statformIds: ready.map((f) => f.id),
+          partial: status === 'PARTIAL',
+        },
+        run.id,
+      )
       .catch((e) => this.logger.error(`statform.ready notify failed: ${e.message}`));
   }
 
-  async failRun(organizationId: string, period: string, reason?: string) {
-    const run = await this.prisma.statFormRun.update({
+  async failRun(organizationId: string, period: string, reason?: string, cause?: StatformFailCause) {
+    const run = await this.prisma.statFormRun.upsert({
       where: { organizationId_period: { organizationId, period } },
-      data: { status: 'FAILED', failureReason: reason ?? null },
+      create: { organizationId, period, status: 'FAILED', failureReason: reason ?? null },
+      update: { status: 'FAILED', failureReason: reason ?? null },
     });
 
     this.notifications
-      .notify(organizationId, 'statform.failed', { period }, run.id)
+      .notify(organizationId, 'statform.failed', { period, ...(cause && { cause }) }, run.id)
       .catch((e) => this.logger.error(`statform.failed notify failed: ${e.message}`));
   }
 }

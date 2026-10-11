@@ -6,10 +6,11 @@ type Props = {
   name: string | null;
   orgName: string;
   period: string;
+  cause?: 'rate_unavailable';
   actionUrl: string;
 };
 
-export function StatformFailedTemplate({ name, orgName, period, actionUrl }: Props) {
+export function StatformFailedTemplate({ name, orgName, period, cause, actionUrl }: Props) {
   const periodLabel = formatPeriod(period);
   return (
     <EmailLayout
@@ -18,12 +19,27 @@ export function StatformFailedTemplate({ name, orgName, period, actionUrl }: Pro
       action={{ label: 'Запустить заново', url: actionUrl }}
     >
       <Greeting name={name} />
-      <Text style={styles.text}>
-        При формировании статистических форм за {periodLabel} для {orgName} произошла ошибка.
-      </Text>
-      <Text style={styles.text}>
-        Попробуйте запустить формирование заново. Если ошибка повторится — напишите нам, разберёмся.
-      </Text>
+      {cause === 'rate_unavailable' ? (
+        <>
+          <Text style={styles.text}>
+            Для статформ за {periodLabel} для {orgName} нужен официальный курс доллара ЦБ РФ,
+            а сервис ЦБ сейчас временно недоступен.
+          </Text>
+          <Text style={styles.text}>
+            Это не связано с вашими данными. Подождите несколько часов и запустите формирование
+            заново вручную на странице «Статформы».
+          </Text>
+        </>
+      ) : (
+        <>
+          <Text style={styles.text}>
+            При формировании статистических форм за {periodLabel} для {orgName} произошла ошибка.
+          </Text>
+          <Text style={styles.text}>
+            Попробуйте запустить формирование заново. Если ошибка повторится — напишите нам, разберёмся.
+          </Text>
+        </>
+      )}
     </EmailLayout>
   );
 }

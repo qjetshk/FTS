@@ -49,6 +49,9 @@ services:
     env_file: ../email-worker/.env
     environment:
       REDIS_HOST: redis
+      # внутренний API бэка (XML статформ для вложений); значения подставляются из back/.env
+      BACK_INTERNAL_URL: http://app:${PORT}/api
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
     volumes:
       - ../email-worker:/app
     command: npm run start:dev

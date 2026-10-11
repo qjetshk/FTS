@@ -24,6 +24,9 @@ export function StatformReadyTemplate({ name, orgName, period, countries, partia
         Мы сформировали статистические формы за {periodLabel} для {orgName}:{' '}
         {countries.map(countryName).join(', ')}.
       </Text>
+      <Text style={styles.text}>
+        XML-файлы статформ — во вложении к этому письму, их можно скачать и отправить сразу.
+      </Text>
       {partial && (
         <Text style={styles.text}>
           По некоторым странам сформировать форму не удалось — подробности на странице статформ.

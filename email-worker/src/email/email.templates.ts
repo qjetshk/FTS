@@ -7,10 +7,13 @@ import { OzonApiErrorTemplate } from './templates/ozon-api-error';
 import { ProductsNeedReviewTemplate } from './templates/products-need-review';
 import { formatPeriod, productsCount } from './templates/format.util';
 import type { EmailJobData, EmailJobName } from './email.types';
+import type { BackApiClient, EmailAttachment } from './back-api.client';
 
 type EmailTemplate<T extends EmailJobName> = {
   subject: (data: EmailJobData<T>) => string;
   render: (data: EmailJobData<T>) => ReactElement;
+  // вложения подтягиваются в момент отправки, в задаче очереди лежат только ссылки (id)
+  attachments?: (data: EmailJobData<T>, back: BackApiClient) => Promise<EmailAttachment[]>;
 };
 
 // Реестр писем: новое письмо = строка здесь + тип в email.types.ts
@@ -26,6 +29,7 @@ export const EMAIL_TEMPLATES: { [T in EmailJobName]: EmailTemplate<T> } = {
   'statform.ready': {
     subject: (d) => `Статформы за ${formatPeriod(d.period)} готовы`,
     render: (d) => StatformReadyTemplate(d),
+    attachments: (d, back) => Promise.all(d.statformIds.map((id) => back.getStatformFile(id))),
   },
   'statform.failed': {
     subject: (d) => `Не удалось сформировать статформы за ${formatPeriod(d.period)}`,
