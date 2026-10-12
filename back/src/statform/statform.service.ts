@@ -333,6 +333,17 @@ export class StatformService {
 
   // reason — человекочитаемая причина на русском: видна юзеру на странице и в письме
   async failRun(organizationId: string, period: string, reason?: string, cause?: StatformFailCause) {
+    // завершённый прогон не трогаем: поздняя ошибка (Error Workflow n8n, повторный колбэк) не должна
+    // перетереть готовый результат или прислать второе письмо. Новый запуск сам переводит прогон в PENDING
+    const existing = await this.prisma.statFormRun.findUnique({
+      where: { organizationId_period: { organizationId, period } },
+      select: { status: true },
+    });
+    if (existing && existing.status !== 'PENDING' && existing.status !== 'BUILDING') {
+      this.logger.warn(`failRun skipped: org=${organizationId} period=${period} already ${existing.status}`);
+      return;
+    }
+
     const run = await this.prisma.statFormRun.upsert({
       where: { organizationId_period: { organizationId, period } },
       create: { organizationId, period, status: 'FAILED', failureReason: reason ?? null },
