@@ -167,3 +167,8 @@ n8n/
 
 *storybook.log
 storybook-static
+
+# -----------------
+# Курсовая работа (local only)
+# -----------------
+kursach/

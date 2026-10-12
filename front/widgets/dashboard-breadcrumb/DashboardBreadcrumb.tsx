@@ -112,6 +112,7 @@ function OrgCrumb({ pageBase }: OrgCrumbProps) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Поиск..."
+              aria-label="Поиск организации"
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>

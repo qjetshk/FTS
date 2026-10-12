@@ -49,6 +49,7 @@ export function NotificationSettings() {
             type="button"
             role="switch"
             aria-checked={values[t.id]}
+            aria-label={t.label}
             disabled={t.disabled}
             onClick={() => !t.disabled && toggle(t.id)}
             className={[

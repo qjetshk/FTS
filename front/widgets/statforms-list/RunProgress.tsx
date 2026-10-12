@@ -1,6 +1,6 @@
 "use client"
 
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, m } from "framer-motion"
 import { Check } from "lucide-react"
 import { cn } from "@/shared/lib"
 import { RUN_STAGES, type StatFormRunStage } from "@/entities/statform"
@@ -15,10 +15,11 @@ export function RunProgress({ stage }: { stage: StatFormRunStage | null }) {
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface px-4 py-3">
       <div className="h-1 w-full overflow-hidden rounded-full bg-border">
-        <motion.div
-          className="h-full rounded-full bg-primary"
+        {/* scaleX вместо width — без пересчёта раскладки на каждом кадре */}
+        <m.div
+          className="h-full w-full origin-left rounded-full bg-primary"
           initial={false}
-          animate={{ width: `${progress * 100}%` }}
+          animate={{ scaleX: progress }}
           transition={{ duration: 0.6, ease: EASE }}
         />
       </div>
@@ -32,7 +33,7 @@ export function RunProgress({ stage }: { stage: StatFormRunStage | null }) {
               <span className="relative flex size-4 shrink-0 items-center justify-center">
                 <AnimatePresence mode="wait" initial={false}>
                   {done ? (
-                    <motion.span
+                    <m.span
                       key="done"
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
@@ -41,9 +42,9 @@ export function RunProgress({ stage }: { stage: StatFormRunStage | null }) {
                       className="flex size-4 items-center justify-center rounded-full bg-primary"
                     >
                       <Check className="size-2.5 text-primary-foreground" strokeWidth={3} />
-                    </motion.span>
+                    </m.span>
                   ) : (
-                    <motion.span
+                    <m.span
                       key="dot"
                       className={cn("size-2 rounded-full", active ? "bg-primary" : "bg-border")}
                       animate={active ? { scale: [1, 1.6, 1], opacity: [1, 0.5, 1] } : { scale: 1, opacity: 1 }}
@@ -74,7 +75,7 @@ export function RunStageLabel({ stage }: { stage: StatFormRunStage | null }) {
   return (
     <span className="relative inline-flex h-4 overflow-hidden text-xs text-muted-foreground">
       <AnimatePresence mode="popLayout" initial={false}>
-        <motion.span
+        <m.span
           key={label}
           initial={{ y: 12, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -82,7 +83,7 @@ export function RunStageLabel({ stage }: { stage: StatFormRunStage | null }) {
           transition={{ duration: 0.3, ease: EASE }}
         >
           {label}…
-        </motion.span>
+        </m.span>
       </AnimatePresence>
     </span>
   )

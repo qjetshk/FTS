@@ -1,9 +1,12 @@
-import { getCoreRowModel, useReactTable, type ColumnSizingState, type OnChangeFn } from "@tanstack/react-table"
+import type { KeyboardEvent } from "react"
+import { getCoreRowModel, useReactTable, type Column, type ColumnSizingState, type OnChangeFn } from "@tanstack/react-table"
 import { Skeleton } from "@/shared/ui"
 import { cn } from "@/shared/lib"
 import { type Product, type PendingTnved } from "@/entities/product"
 import { COLUMNS } from "../config/table.config"
 import { ProductRow } from "./ProductRow"
+
+const KEY_STEP = 16
 
 type Props = {
   items: Product[]
@@ -30,6 +33,20 @@ export function TableBlock({ items, clientId, isLoading, variant, label, maxHeig
     state: { columnSizing },
     onColumnSizingChange,
   })
+
+  // клавиатурное изменение ширины: ← → по KEY_STEP px с учётом minSize, Home — исходная ширина
+  const resizeByKey = (e: KeyboardEvent<HTMLDivElement>, column: Column<Product>) => {
+    if (e.key === "Home") {
+      e.preventDefault()
+      column.resetSize()
+      return
+    }
+    const delta = e.key === "ArrowRight" ? KEY_STEP : e.key === "ArrowLeft" ? -KEY_STEP : 0
+    if (!delta) return
+    e.preventDefault()
+    const size = Math.max(column.columnDef.minSize ?? 0, column.getSize() + delta)
+    table.setColumnSizing((prev) => ({ ...prev, [column.id]: size }))
+  }
 
   // fixed px columns + trailing 1fr filler so the table stretches on wide screens and scrolls on narrow ones
   const gridCols = [...table.getVisibleLeafColumns().map(c => `${c.getSize()}px`), "1fr"].join(" ")
@@ -59,6 +76,12 @@ export function TableBlock({ items, clientId, isLoading, variant, label, maxHeig
                 </span>
                 {header.column.getCanResize() && i < headers.length - 1 && (
                   <div
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label={`Ширина колонки «${header.column.columnDef.header as string}»: стрелки ← →, Home — сброс`}
+                    aria-valuenow={header.column.getSize()}
+                    tabIndex={0}
+                    onKeyDown={(e) => resizeByKey(e, header.column)}
                     onMouseDown={header.getResizeHandler()}
                     onTouchStart={header.getResizeHandler()}
                     onDoubleClick={() => header.column.resetSize()}

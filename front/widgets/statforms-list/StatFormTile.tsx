@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, m } from "framer-motion"
 import { FileText, Download, AlertCircle, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/shared/lib"
@@ -55,7 +55,7 @@ export function StatFormTile({ file, period }: { file: StatForm; period: string 
       )}
 
       {/* дефолтный контент */}
-      <motion.div
+      <m.div
         animate={{ opacity: hover && ready ? 0 : 1 }}
         transition={{ duration: 0.15 }}
         className="flex flex-col items-center gap-3 pointer-events-none"
@@ -73,12 +73,12 @@ export function StatFormTile({ file, period }: { file: StatForm; period: string 
         {file.itemsCount > 0 && (
           <span className="text-xs text-muted-foreground">{file.itemsCount} тов.</span>
         )}
-      </motion.div>
+      </m.div>
 
       {/* hover-оверлей со скачиванием */}
       <AnimatePresence>
         {hover && ready && !busy && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, scale: 0.75 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.75 }}
@@ -86,17 +86,17 @@ export function StatFormTile({ file, period }: { file: StatForm; period: string 
             className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none"
           >
             <Download className="size-10 text-(--success-fg)" />
-          </motion.div>
+          </m.div>
         )}
         {busy && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="absolute inset-0 flex items-center justify-center pointer-events-none"
           >
             <Loader2 className="size-10 text-(--success-fg) animate-spin" />
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </button>

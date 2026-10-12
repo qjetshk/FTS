@@ -1,8 +1,9 @@
 import Link from "next/link"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, m } from "framer-motion"
 import { AlertTriangle, PackageSearch } from "lucide-react"
 import { AccordionItem, AccordionTrigger, AccordionContent, Badge } from "@/shared/ui"
 import { ROUTES } from "@/shared/config"
+import { cn } from "@/shared/lib"
 import { formatPeriodTitle, isRunActive, RUN_STATUS } from "@/entities/statform"
 import { StatFormTile } from "./StatFormTile"
 import { RunProgress, RunStageLabel } from "./RunProgress"
@@ -20,7 +21,7 @@ export function StatFormRunItem({ run }: { run: StatFormRun }) {
           <span>{formatPeriodTitle(run.period)}</span>
           {/* key по статусу → бейдж «выпрыгивает» при каждой смене */}
           <AnimatePresence mode="wait" initial={false}>
-            <motion.span
+            <m.span
               key={run.status}
               initial={{ scale: 0.6, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -28,7 +29,7 @@ export function StatFormRunItem({ run }: { run: StatFormRun }) {
               transition={{ type: "spring", stiffness: 500, damping: 22 }}
             >
               <Badge variant={status.variant}>{status.label}</Badge>
-            </motion.span>
+            </m.span>
           </AnimatePresence>
           {active ? (
             <RunStageLabel stage={run.stage} />
@@ -46,15 +47,15 @@ export function StatFormRunItem({ run }: { run: StatFormRun }) {
         <div className="flex flex-col gap-4">
           <AnimatePresence initial={false}>
             {active && (
-              <motion.div
+              <m.div
                 key="progress"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.25 }}
               >
                 <RunProgress stage={run.stage} />
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
 
@@ -75,26 +76,26 @@ export function StatFormRunItem({ run }: { run: StatFormRun }) {
             </div>
           )}
 
-          {fileCount === 0 ? (
-            !active && run.status !== "NEEDS_REVIEW" && <p className="text-sm text-muted-foreground">Нет файлов</p>
-          ) : (
-            <motion.div layout className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
+          {fileCount === 0 && !active && run.status !== "NEEDS_REVIEW" && (
+            <p className="text-sm text-muted-foreground">Нет файлов</p>
+          )}
+
+          {/* сетка всегда в дереве — AnimatePresence должен пережить удаление последней плитки */}
+          <div className={cn("grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4", fileCount === 0 && "hidden")}>
               <AnimatePresence initial={false}>
                 {run.statForms.map((f) => (
-                  <motion.div
+                  <m.div
                     key={f.id}
-                    layout
                     initial={{ opacity: 0, scale: 0.85, y: 8 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.85 }}
                     transition={{ type: "spring", stiffness: 400, damping: 28 }}
                   >
                     <StatFormTile file={f} period={run.period} />
-                  </motion.div>
+                  </m.div>
                 ))}
               </AnimatePresence>
-            </motion.div>
-          )}
+          </div>
         </div>
       </AccordionContent>
     </AccordionItem>

@@ -52,7 +52,8 @@ export function TnvedReviewPopover({
   const [query, setQuery] = useState("")
   const pageRef = useRef(1)
   const [allItems, setAllItems] = useState<TnvedItem[]>([])
-  const [hasMore, setHasMore] = useState(false)
+  // нужен только в обработчике скролла — ref, чтобы не перерисовывать поповер
+  const hasMoreRef = useRef(false)
   const loadingMore = useRef(false)
 
   const [searchTnved, { isFetching }] = useLazySearchTnvedQuery()
@@ -67,11 +68,11 @@ export function TnvedReviewPopover({
   const activeCode = pendingCode ?? tnvedCode
 
   const doSearch = useCallback(async (q: string, pg: number, append = false) => {
-    if (q.length < 2) { setAllItems([]); setHasMore(false); return }
+    if (q.length < 2) { setAllItems([]); hasMoreRef.current = false; return }
     const result = await searchTnved({ q, page: pg, limit: LIMIT }).unwrap().catch(() => null)
     if (!result) return
     setAllItems(prev => append ? [...prev, ...result.items] : result.items)
-    setHasMore(result.items.length === LIMIT)
+    hasMoreRef.current = result.items.length === LIMIT
   }, [searchTnved])
 
   const handleQueryChange = (q: string) => {
@@ -82,7 +83,7 @@ export function TnvedReviewPopover({
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < 60 && hasMore && !isFetching && !loadingMore.current) {
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 60 && hasMoreRef.current && !isFetching && !loadingMore.current) {
       loadingMore.current = true
       const nextPage = pageRef.current + 1
       pageRef.current = nextPage
@@ -92,7 +93,7 @@ export function TnvedReviewPopover({
 
   const handleOpen = (v: boolean) => {
     setOpen(v)
-    if (!v) { setQuery(""); setAllItems([]); pageRef.current = 1; setHasMore(false) }
+    if (!v) { setQuery(""); setAllItems([]); pageRef.current = 1; hasMoreRef.current = false }
   }
 
   const pick = (code: string, name: string | null, unit: string | null) => {
