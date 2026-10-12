@@ -1,12 +1,13 @@
 import { Text } from '@react-email/components';
 import { EmailLayout, Greeting, styles } from './layout';
 import { formatPeriod } from './format.util';
+import type { StatformFailCause } from '../email.types';
 
 type Props = {
   name: string | null;
   orgName: string;
   period: string;
-  cause?: 'rate_unavailable';
+  cause?: StatformFailCause;
   reason?: string;
   actionUrl: string;
 };
@@ -17,10 +18,22 @@ export function StatformFailedTemplate({ name, orgName, period, cause, reason, a
     <EmailLayout
       preview={`Не удалось сформировать статформы за ${periodLabel}`}
       title="Статформы не сформированы"
-      action={{ label: 'Запустить заново', url: actionUrl }}
+      // для ozon_auth бэк ведёт кнопку в настройки организации
+      action={{ label: cause === 'ozon_auth' ? 'Обновить API-ключ' : 'Запустить заново', url: actionUrl }}
     >
       <Greeting name={name} />
-      {cause === 'rate_unavailable' ? (
+      {cause === 'ozon_auth' ? (
+        <>
+          <Text style={styles.text}>
+            Не удалось сформировать статформы за {periodLabel} для {orgName}: OZON отклонил API-ключ.
+            Скорее всего, ключ отозван, истёк или у него не хватает прав.
+          </Text>
+          <Text style={styles.text}>
+            Создайте новый ключ в личном кабинете продавца OZON, укажите его в настройках организации
+            и запустите формирование заново.
+          </Text>
+        </>
+      ) : cause === 'rate_unavailable' ? (
         <>
           <Text style={styles.text}>
             Для статформ за {periodLabel} для {orgName} нужен официальный курс доллара ЦБ РФ,

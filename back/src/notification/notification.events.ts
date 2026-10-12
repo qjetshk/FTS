@@ -39,7 +39,8 @@ export class StatformReadyPayload {
 }
 
 // известные причины сбоя — от них зависит текст письма; без cause — общая ошибка
-export const STATFORM_FAIL_CAUSES = ['rate_unavailable'] as const;
+// ozon_auth — OZON отклонил API-ключ (401/403), кнопка в письме ведёт в настройки организации
+export const STATFORM_FAIL_CAUSES = ['rate_unavailable', 'ozon_auth'] as const;
 export type StatformFailCause = (typeof STATFORM_FAIL_CAUSES)[number];
 
 export class StatformFailedPayload {
@@ -104,10 +105,12 @@ export type NotificationEvent = keyof typeof NOTIFICATION_PAYLOADS;
 export type NotificationPayload<E extends NotificationEvent> = InstanceType<(typeof NOTIFICATION_PAYLOADS)[E]>;
 export const NOTIFICATION_EVENTS = Object.keys(NOTIFICATION_PAYLOADS) as NotificationEvent[];
 
-// куда ведёт кнопка в письме (путь на фронте)
-export const NOTIFICATION_ACTION_PATH: Record<NotificationEvent, string> = {
+// куда ведёт кнопка в письме (путь на фронте); функция — если путь зависит от payload
+export const NOTIFICATION_ACTION_PATH: {
+  [E in NotificationEvent]: string | ((payload: NotificationPayload<E>) => string);
+} = {
   'statform.ready': '/dashboard/statforms',
-  'statform.failed': '/dashboard/statforms',
+  'statform.failed': (p) => (p.cause === 'ozon_auth' ? '/dashboard/organizations' : '/dashboard/statforms'),
   'products.need-review': '/dashboard/products',
   'ozon.api-error': '/dashboard/organizations',
 };

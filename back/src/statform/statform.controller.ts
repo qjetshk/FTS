@@ -76,7 +76,7 @@ export class StatformController {
   @UseGuards(ApiKeyGuard)
   async failRun(@Body() dto: RunCallbackDto) {
     const orgId = await this.statformService.resolveOrgId(dto);
-    await this.statformService.failRun(orgId, dto.period, dto.reason);
+    await this.statformService.failRun(orgId, dto.period, dto.reason, dto.cause);
     return { ok: true };
   }
 

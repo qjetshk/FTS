@@ -81,13 +81,15 @@ export class NotificationService {
     }
 
     const frontendUrl = this.config.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    const path = NOTIFICATION_ACTION_PATH[event] as string | ((p: NotificationPayload<E>) => string);
+    const actionPath = typeof path === 'function' ? path(payload) : path;
     return this.emailProducer.sendNotification(
       event,
       {
         to: org.user.email,
         name: org.user.name,
         orgName: org.fullOrg,
-        actionUrl: `${frontendUrl}${NOTIFICATION_ACTION_PATH[event]}`,
+        actionUrl: `${frontendUrl}${actionPath}`,
         ...payload,
       },
       // дубль = то же событие + тот же ключ + то же содержимое (другие товары за тот же период → новое письмо)

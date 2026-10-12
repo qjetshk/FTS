@@ -11,7 +11,11 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
-import { ReviewProductItem } from '../../notification/notification.events';
+import {
+  ReviewProductItem,
+  STATFORM_FAIL_CAUSES,
+  type StatformFailCause,
+} from '../../notification/notification.events';
 
 // Колбэки n8n по прогону. Организацию можно указать organizationId или clientId (в вебхуке n8n есть только client_id).
 export class RunCallbackDto {
@@ -32,6 +36,11 @@ export class RunCallbackDto {
   @IsOptional()
   @MaxLength(500)
   reason?: string;
+
+  // известная причина сбоя (run/failed) — от неё зависит текст письма и куда ведёт кнопка
+  @IsOptional()
+  @IsIn(STATFORM_FAIL_CAUSES)
+  cause?: StatformFailCause;
 }
 
 // шаги, которые присылает n8n (STARTED и FILLING бэк ставит сам)

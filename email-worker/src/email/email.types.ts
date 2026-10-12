@@ -10,12 +10,15 @@ type NotificationBase = {
 
 export type ReviewProduct = { sku: string; name: string };
 
+// = STATFORM_FAIL_CAUSES на бэке
+export type StatformFailCause = 'rate_unavailable' | 'ozon_auth';
+
 // Имя задачи в очереди = имя события на бэке (src/notification/notification.events.ts)
 export type EmailJobMap = {
   'welcome': { to: string };
   'login-code': { to: string; code: string };
   'statform.ready': NotificationBase & { period: string; countries: string[]; statformIds: string[]; partial: boolean };
-  'statform.failed': NotificationBase & { period: string; cause?: 'rate_unavailable'; reason?: string };
+  'statform.failed': NotificationBase & { period: string; cause?: StatformFailCause; reason?: string };
   'products.need-review': NotificationBase & { period: string; products: ReviewProduct[] };
   'ozon.api-error': NotificationBase & { reason?: string };
 };
