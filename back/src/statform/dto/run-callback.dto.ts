@@ -49,3 +49,23 @@ export class RunNeedsReviewDto extends RunCallbackDto {
   @Type(() => ReviewProductItem)
   products!: ReviewProductItem[];
 }
+
+export class FailedCountryItem {
+  @IsIn(['BY', 'KZ', 'AM', 'KG'])
+  country!: string;
+
+  // причина на русском — видна юзеру в письме, если не собралась ни одна страна
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reason?: string;
+}
+
+// итоговый колбэк после Create XML по всем странам: какие не собрались (собравшиеся бэк уже знает из create-n8n)
+export class RunCompleteDto extends RunCallbackDto {
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => FailedCountryItem)
+  failedCountries?: FailedCountryItem[];
+}

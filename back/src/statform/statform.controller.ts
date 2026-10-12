@@ -16,7 +16,7 @@ import { StatformService } from './statform.service';
 import { StatformCron } from './statform.cron';
 import { CreateStatformDto } from './dto/create-statform.dto';
 import { RunStatformDto } from './dto/run-statform.dto';
-import { RunCallbackDto, RunNeedsReviewDto, RunProgressDto } from './dto/run-callback.dto';
+import { RunCallbackDto, RunCompleteDto, RunNeedsReviewDto, RunProgressDto } from './dto/run-callback.dto';
 import { JwtAuthGuard } from '../guards/jwt.guard';
 import { ApiKeyGuard } from '../guards/api-key.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
@@ -66,9 +66,9 @@ export class StatformController {
 
   @Post('internal/run/complete')
   @UseGuards(ApiKeyGuard)
-  async completeRun(@Body() dto: RunCallbackDto) {
+  async completeRun(@Body() dto: RunCompleteDto) {
     const orgId = await this.statformService.resolveOrgId(dto);
-    await this.statformService.completeRun(orgId, dto.period);
+    await this.statformService.completeRun(orgId, dto.period, dto.failedCountries);
     return { ok: true };
   }
 

@@ -15,6 +15,7 @@ import { CreateStatformDto } from './dto/create-statform.dto';
 import { decrypt, encrypt, EncryptedPayload } from 'src/utils/crypto.util';
 import { CbrService, CbrUnavailableError } from './cbr.service';
 import type { ReviewProductItem, StatformFailCause } from '../notification/notification.events';
+import type { FailedCountryItem } from './dto/run-callback.dto';
 import { RunEventsService, RUN_VIEW } from './run-events.service';
 import { RedisService } from 'src/redis/redis.service';
 import type { RUN_STAGE } from '@prisma/client';
@@ -267,15 +268,40 @@ export class StatformService {
     await this.runEvents.emit(run.id);
   }
 
-  async completeRun(organizationId: string, period: string) {
-    this.logger.log(`completeRun: org=${organizationId} period=${period}`);
-    const run = await this.prisma.statFormRun.findUnique({
+  // итоговый колбэк n8n — один на прогон, после Create XML по всем странам.
+  // failedCountries — страны, где create-n8n упал (собравшиеся уже лежат в READY)
+  async completeRun(organizationId: string, period: string, failedCountries: FailedCountryItem[] = []) {
+    this.logger.log(
+      `completeRun: org=${organizationId} period=${period} failed=${failedCountries.map((f) => f.country).join(',') || '-'}`,
+    );
+    const found = await this.prisma.statFormRun.findUnique({
       where: { organizationId_period: { organizationId, period } },
+      select: { id: true, status: true },
+    });
+    // прогон уже завершился ошибкой в этом запуске (нет курса ЦБ, товары на проверку) — не перетираем;
+    // при новом запуске процессор сам переводит его в BUILDING
+    if (!found || found.status !== 'BUILDING') return;
+
+    // XML старой версии остаётся в записи, но скачать его нельзя — файл отдаётся только для READY
+    for (const { country } of failedCountries) {
+      await this.prisma.statForm.upsert({
+        where: { runId_country: { runId: found.id, country } },
+        create: { runId: found.id, country, status: 'FAILED' },
+        update: { status: 'FAILED', completedAt: null },
+      });
+    }
+
+    const run = await this.prisma.statFormRun.findUniqueOrThrow({
+      where: { id: found.id },
       include: { statForms: { select: { id: true, status: true, country: true } } },
     });
-    // прогон уже завершился ошибкой в этом запуске (нет курса ЦБ, товары на проверку) — не перетираем на READY;
-    // при новом запуске процессор сам переводит его в BUILDING
-    if (!run || run.status !== 'BUILDING' || run.statForms.length === 0) return;
+    if (run.statForms.length === 0) return;
+
+    // ни одна страна не собралась — это ошибка прогона, а не частичный результат
+    if (!run.statForms.some((f) => f.status === 'READY')) {
+      const reason = failedCountries.map((f) => `${f.country}: ${f.reason ?? 'ошибка формирования XML'}`).join('; ');
+      return this.failRun(organizationId, period, reason.slice(0, 500) || undefined);
+    }
 
     const hasFailed = run.statForms.some((f) => f.status === 'FAILED');
     const status = hasFailed ? 'PARTIAL' : 'READY';
