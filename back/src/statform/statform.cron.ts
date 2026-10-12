@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatformProducer } from './statform.producer';
+import { StatformService } from './statform.service';
 import { StatformJobData } from '../queue/queue.types';
 
 function previousMonthPeriod(): string {
@@ -18,7 +19,14 @@ export class StatformCron {
   constructor(
     private readonly prisma: PrismaService,
     private readonly producer: StatformProducer,
+    private readonly statformService: StatformService,
   ) {}
+
+  @Cron('*/10 * * * *')
+  async failStaleRuns(): Promise<void> {
+    const count = await this.statformService.failStaleRuns();
+    if (count) this.logger.warn(`Failed ${count} stale statform runs`);
+  }
 
   @Cron('0 6 1 * *')
   async enqueueMonthlyStatforms(): Promise<void> {

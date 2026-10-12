@@ -21,7 +21,7 @@ import { RedisService } from 'src/redis/redis.service';
 import type { RUN_STAGE } from '@prisma/client';
 import { StatformProducer } from './statform.producer';
 
-const STALE_RUN_MS = 30 * 60 * 1000;
+export const STALE_RUN_MS = 30 * 60 * 1000;
 const MANUAL_RUNS_LIMIT = 2;
 const MANUAL_RUNS_WINDOW = 60 * 60;
 
@@ -266,6 +266,27 @@ export class StatformService {
 
     await this.prisma.statFormRun.update({ where: { id: run.id }, data: { stage } });
     await this.runEvents.emit(run.id);
+  }
+
+  // прогоны без изменений дольше STALE_RUN_MS: n8n упал посреди выполнения (Error Workflow на это не срабатывает)
+  // или задача потерялась в очереди — без этого юзер видит вечную «генерацию» и не получает письма
+  async failStaleRuns(): Promise<number> {
+    const stale = await this.prisma.statFormRun.findMany({
+      where: {
+        status: { in: ['PENDING', 'BUILDING'] },
+        updatedAt: { lt: new Date(Date.now() - STALE_RUN_MS) },
+      },
+      select: { organizationId: true, period: true },
+    });
+    for (const { organizationId, period } of stale) {
+      this.logger.warn(`Stale run: org=${organizationId} period=${period}`);
+      await this.failRun(
+        organizationId,
+        period,
+        'Генерация прервалась — сервис формирования не ответил. Запустите генерацию заново.',
+      ).catch((e: Error) => this.logger.error(`failStaleRuns: ${e.message}`));
+    }
+    return stale.length;
   }
 
   // итоговый колбэк n8n — один на прогон, после Create XML по всем странам.
