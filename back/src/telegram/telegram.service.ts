@@ -6,6 +6,7 @@ import { HttpsProxyAgent } from 'https-proxy-agent';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 const RESTART_DELAY = 10_000;
+const STOP_TIMEOUT = 3_000;
 
 export type TelegramButton = { text: string; url: string };
 
@@ -85,9 +86,15 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
     if (this.bot) void this.startPolling(this.bot);
   }
 
+  // stop() ждёт завершения текущего long poll (до 30 с, через прокси бывает дольше) —
+  // без таймаута hot reload зависает: старый процесс не выходит, новый не стартует
   async onModuleDestroy() {
     this.stopping = true;
-    if (this.bot?.isRunning()) await this.bot.stop();
+    if (!this.bot?.isRunning()) return;
+    await Promise.race([
+      this.bot.stop().catch((e) => this.logger.warn(`Bot stop failed: ${(e as Error).message}`)),
+      new Promise((r) => setTimeout(r, STOP_TIMEOUT)),
+    ]);
   }
 
   // start() резолвится только при остановке; 409 (старый процесс после hot reload ещё держит getUpdates) и сеть — перезапуск
