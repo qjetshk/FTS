@@ -14,8 +14,8 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   // за ngrok / reverse-proxy: req.ip = реальный клиент из X-Forwarded-For (лимиты кодов, сессии)
   app.set('trust proxy', 1);
-  // onModuleDestroy на SIGTERM: бот отпускает getUpdates до старта нового процесса (иначе 409 после hot reload)
-  app.enableShutdownHooks();
+  // enableShutdownHooks не включаем: app.close() ждёт закрытия всех соединений, а SSE статусов прогонов
+  // не закрывается никогда → при hot reload старый процесс висел вечно. 409 от Telegram после рестарта бот переживает сам.
 
   const config = app.get(ConfigService);
 

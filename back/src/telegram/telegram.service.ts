@@ -86,8 +86,7 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
     if (this.bot) void this.startPolling(this.bot);
   }
 
-  // stop() ждёт завершения текущего long poll (до 30 с, через прокси бывает дольше) —
-  // без таймаута hot reload зависает: старый процесс не выходит, новый не стартует
+  // срабатывает при app.close() (тесты, ручное закрытие); stop() ждёт текущий long poll — ограничиваем по времени
   async onModuleDestroy() {
     this.stopping = true;
     if (!this.bot?.isRunning()) return;
@@ -97,7 +96,7 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
     ]);
   }
 
-  // start() резолвится только при остановке; 409 (старый процесс после hot reload ещё держит getUpdates) и сеть — перезапуск
+  // start() резолвится только при остановке; 409 (старый процесс после рестарта ещё держит getUpdates, до ~30 с) и сеть — перезапуск
   private async startPolling(bot: Bot) {
     while (!this.stopping) {
       try {

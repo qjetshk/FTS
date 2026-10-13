@@ -33,17 +33,20 @@ services:
       - '${PORT}:${PORT}' # порт берём из .env
       - "51212:51212"
     env_file: .env
-    # host.docker.internal → прокси на хосте (TELEGRAM_PROXY): своего DNS наружу у контейнера нет
+    # host.docker.internal → прокси на хосте (TELEGRAM_PROXY): api.telegram.org напрямую недоступен
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     volumes:
-      - .:/app # монтируем текущую папку внутрь контейнера
-    command: npm run start:dev # hot-reload
+      - .:/app # исходники с хоста — hot reload
+      # node_modules — в volume, а не через медленный 9p с Windows (см. docker/dev-entrypoint.sh)
+      - back_node_modules:/app/node_modules
+    # сам ставит зависимости при смене package-lock.json и генерит prisma client при смене схемы
+    command: sh docker/dev-entrypoint.sh npm run start:dev
     depends_on:
       - postgres
       - redis
 
-  # без build: готовый образ + node_modules с хоста (npm install в ../email-worker), docker в сеть не ходит
+  # без build: готовый образ, зависимости ставит dev-entrypoint в свой volume
   email-worker:
     image: node:22-alpine
     container_name: fts-email-worker
@@ -57,10 +60,14 @@ services:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY}
     volumes:
       - ../email-worker:/app
-    command: npm run start:dev
+      - email_worker_node_modules:/app/node_modules
+      - ./docker/dev-entrypoint.sh:/dev-entrypoint.sh:ro
+    command: sh /dev-entrypoint.sh npm run start:dev
     depends_on:
       - redis
 
 
 volumes:
   pgdata:
+  back_node_modules:
+  email_worker_node_modules:
