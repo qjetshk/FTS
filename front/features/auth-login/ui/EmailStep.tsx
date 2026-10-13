@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { Form, FormField, FormItem, FormControl, FormMessage, Button, Input } from "@/shared/ui"
 import { getApiErrorMessage } from "@/shared/lib"
 import { emailSchema, type EmailFormValues, useRequestCodeMutation } from "@/entities/user"
+import { TelegramLoginButton } from "./TelegramLoginButton"
 
 type Props = {
   defaultEmail?: string
@@ -53,6 +54,13 @@ export function EmailStep({ defaultEmail = "", onSent }: Props) {
         <Button type="submit" className="mt-6 w-full" disabled={isLoading}>
           {isLoading ? "Отправляем..." : "Получить код"}
         </Button>
+
+        <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="h-px flex-1 bg-border" />
+          или
+          <div className="h-px flex-1 bg-border" />
+        </div>
+        <TelegramLoginButton />
       </form>
     </Form>
   )

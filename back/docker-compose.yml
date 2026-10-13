@@ -33,6 +33,9 @@ services:
       - '${PORT}:${PORT}' # порт берём из .env
       - "51212:51212"
     env_file: .env
+    # host.docker.internal → прокси на хосте (TELEGRAM_PROXY): своего DNS наружу у контейнера нет
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     volumes:
       - .:/app # монтируем текущую папку внутрь контейнера
     command: npm run start:dev # hot-reload

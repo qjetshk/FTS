@@ -10,6 +10,7 @@ import { ProductModule } from './product/product.module';
 import { StatformModule } from './statform/statform.module';
 import { TnvedModule } from './tnved/tnved.module';
 import { NotificationModule } from './notification/notification.module';
+import { TelegramModule } from './telegram/telegram.module';
 import { DEFAULT_JOB_OPTIONS } from './queue/queue.constants';
 
 @Module({
@@ -37,6 +38,7 @@ import { DEFAULT_JOB_OPTIONS } from './queue/queue.constants';
     StatformModule,
     TnvedModule,
     NotificationModule,
+    TelegramModule,
   ],
 })
 export class AppModule {}

@@ -12,7 +12,8 @@ datasource db {
 
 model User {
   id        String  @id @default(cuid())
-  email     String  @unique
+  // null у тех, кто зарегистрировался через Telegram и ещё не привязал почту
+  email     String? @unique
   // null до шага «как вас зовут» после первого входа по коду
   name      String?
   avatarUrl String? @map("avatar_url")
@@ -21,6 +22,10 @@ model User {
   isEmailVerified Boolean @default(false) @map("is_email_verified")
 
   isOnboardingComplete Boolean @default(false) @map("is_onboarding_complete")
+
+  // привязка Telegram через deep link /start <token>; chat_id = куда слать уведомления
+  telegramChatId   BigInt? @unique @map("telegram_chat_id")
+  telegramUsername String? @map("telegram_username")
 
   // Подписка
   plan           PLAN        @default(TRIAL)

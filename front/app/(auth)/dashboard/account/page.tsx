@@ -2,10 +2,12 @@
 
 import Image from "next/image"
 import { CreditCard } from "lucide-react"
-import { useMeQuery } from "@/entities/user"
+import { useMeQuery, userContact } from "@/entities/user"
 import { EditProfileForm } from "@/features/edit-profile"
 import { SessionsList } from "@/features/manage-sessions"
 import { NotificationSettings } from "@/features/notification-settings"
+import { TelegramLinkCard } from "@/features/link-telegram"
+import { LinkEmailCard } from "@/features/link-email"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Skeleton } from "@/shared/ui"
 
 const PLAN_LABEL: Record<string, string> = {
@@ -72,17 +74,18 @@ export default function AccountPage() {
                 />
               ) : (
                 <div className="size-14 rounded-full bg-muted flex items-center justify-center text-lg font-semibold text-muted-foreground">
-                  {(user.name ?? user.email).charAt(0).toUpperCase()}
+                  {(user.name ?? userContact(user)).charAt(0).toUpperCase()}
                 </div>
               )}
               <div className="flex flex-col gap-0.5">
                 <span className="font-medium">{user.name}</span>
-                <span className="text-sm text-muted-foreground">{user.email}</span>
+                <span className="text-sm text-muted-foreground">{userContact(user)}</span>
                 <span className="text-xs text-muted-foreground">
                   Аккаунт создан {formatDate(user.createdAt)}
                 </span>
               </div>
             </div>
+            {!user.email && <LinkEmailCard />}
             <EditProfileForm />
           </CardContent>
         </Card>
@@ -133,7 +136,8 @@ export default function AccountPage() {
           <CardHeader>
             <CardTitle className="text-base">Уведомления</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col gap-4">
+            <TelegramLinkCard />
             <NotificationSettings />
           </CardContent>
         </Card>

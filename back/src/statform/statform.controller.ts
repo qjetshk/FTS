@@ -13,6 +13,7 @@ import type { Response } from 'express';
 import type { Observable } from 'rxjs';
 import { RunEventsService } from './run-events.service';
 import { StatformService } from './statform.service';
+import { StatformFileService } from './statform-file.service';
 import { StatformCron } from './statform.cron';
 import { CreateStatformDto } from './dto/create-statform.dto';
 import { RunStatformDto } from './dto/run-statform.dto';
@@ -25,6 +26,7 @@ import { CurrentUser } from '../decorators/current-user.decorator';
 export class StatformController {
   constructor(
     private readonly statformService: StatformService,
+    private readonly statformFile: StatformFileService,
     private readonly statformCron: StatformCron,
     private readonly runEvents: RunEventsService,
   ) {}
@@ -113,7 +115,7 @@ export class StatformController {
     @Res() res: Response,
   ) {
     const org = await this.statformService.getOrgByUserId(user.id);
-    const { filename, content } = await this.statformService.getStatformFile(id, org.id);
+    const { filename, content } = await this.statformFile.getStatformFile(id, org.id);
 
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -124,6 +126,6 @@ export class StatformController {
   @Get('internal/:id/file')
   @UseGuards(ApiKeyGuard)
   async getStatformFileInternal(@Param('id') id: string) {
-    return this.statformService.getStatformFile(id);
+    return this.statformFile.getStatformFile(id);
   }
 }

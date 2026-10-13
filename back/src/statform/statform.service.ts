@@ -12,7 +12,7 @@ import { NotificationService } from '../notification/notification.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { buildStatFormXml } from './statform.builder';
 import { CreateStatformDto } from './dto/create-statform.dto';
-import { decrypt, encrypt, EncryptedPayload } from 'src/utils/crypto.util';
+import { encrypt } from 'src/utils/crypto.util';
 import { CbrService, CbrUnavailableError } from './cbr.service';
 import type { ReviewProductItem, StatformFailCause } from '../notification/notification.events';
 import type { FailedCountryItem } from './dto/run-callback.dto';
@@ -29,12 +29,6 @@ const MANUAL_RUNS_WINDOW = 60 * 60;
 const formatPeriodRu = (period: string) => {
   const [year, month] = period.split('-').map(Number);
   return `${new Intl.DateTimeFormat('ru-RU', { month: 'long' }).format(new Date(year, month - 1, 1))} ${year}`;
-};
-
-// BY + 2026-09 → BY_statform_09-26.xml
-export const statformFilename = (country: string, period: string) => {
-  const [year, month] = period.split('-');
-  return `${country}_statform_${month}-${year.slice(2)}.xml`;
 };
 
 @Injectable()
@@ -151,22 +145,6 @@ export class StatformService {
 
     await this.runEvents.emit(run.id);
     return { id: statform.id, runId: run.id, country, period };
-  }
-
-  // ── Скачать расшифрованный XML ────────────────────────────────────────────
-  // organizationId не передаётся только из внутреннего эндпоинта (email-worker), там доступ проверяет ApiKeyGuard
-  async getStatformFile(id: string, organizationId?: string): Promise<{ filename: string; content: string }> {
-    const statform = await this.prisma.statForm.findFirst({
-      where: { id, ...(organizationId && { run: { organizationId } }), status: 'READY' },
-      select: { country: true, encryptedXml: true, run: { select: { period: true } } },
-    });
-    if (!statform?.encryptedXml) throw new NotFoundException('Statform not found');
-
-    const key = Buffer.from(process.env.XML_ENCRYPTION_KEY!, 'hex');
-    return {
-      filename: statformFilename(statform.country, statform.run.period),
-      content: decrypt(statform.encryptedXml as unknown as EncryptedPayload, key),
-    };
   }
 
   // ── Список ранов организации со статформами ───────────────────────────────

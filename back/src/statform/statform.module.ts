@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { StatformService } from './statform.service';
+import { StatformFileService } from './statform-file.service';
 import { StatformController } from './statform.controller';
 import { StatformProducer } from './statform.producer';
 import { StatformProcessor } from './statform.processor';
@@ -17,6 +18,7 @@ import { NotificationModule } from '../notification/notification.module';
   controllers: [StatformController],
   providers: [
     StatformService,
+    StatformFileService,
     StatformProducer,
     StatformProcessor,
     StatformCron,

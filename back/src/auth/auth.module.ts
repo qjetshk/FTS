@@ -6,13 +6,16 @@ import { EmailCodeService } from './email-code.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './interfaces/jwt-refresh.strategy';
 import { EmailProducerModule } from 'src/email-producer/email-producer.module';
+import { TelegramModule } from 'src/telegram/telegram.module';
+import { TelegramLoginService } from './telegram-login.service';
 
 @Module({
   imports: [
     JwtModule.register({}),
     EmailProducerModule,
+    TelegramModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, EmailCodeService, JwtStrategy, JwtRefreshStrategy],
+  providers: [AuthService, EmailCodeService, TelegramLoginService, JwtStrategy, JwtRefreshStrategy],
 })
 export class AuthModule {}

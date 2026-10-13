@@ -36,6 +36,11 @@ export class RedisService {
     return (await this.client.set(key, value, 'EX', ttlSeconds, 'NX')) === 'OK';
   }
 
+  // прочитать и удалить атомарно — одноразовые токены нельзя использовать дважды при параллельных запросах
+  async getDel(key: string): Promise<string | null> {
+    return this.client.getdel(key);
+  }
+
   async del(key: string): Promise<void> {
     await this.client.del(key);
   }

@@ -15,13 +15,18 @@ import type { Request, Response } from 'express';
 import { RequestCodeDto } from './dto/request-code.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { TelegramPollDto } from './dto/telegram-poll.dto';
+import { TelegramLoginService } from './telegram-login.service';
 import type { JwtPayload } from './interfaces/jwt.interface';
 import { JwtAuthGuard, JwtRefreshGuard } from 'src/guards/jwt.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly telegramLogin: TelegramLoginService,
+  ) {}
 
   @Post('email/request-code')
   @HttpCode(HttpStatus.OK)
@@ -37,6 +42,40 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.authService.verifyCode(dto, res, req.headers['user-agent'], req.ip);
+  }
+
+  // ─── Вход через Telegram: start → юзер подтверждает в боте → poll отдаёт сессию ───
+
+  @Post('telegram/start')
+  @HttpCode(HttpStatus.OK)
+  async telegramStart(@Req() req: Request) {
+    return this.telegramLogin.start(req.headers['user-agent'], req.ip);
+  }
+
+  @Post('telegram/poll')
+  @HttpCode(HttpStatus.OK)
+  async telegramPoll(
+    @Body() dto: TelegramPollDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.telegramLogin.poll(dto.token, res, req.headers['user-agent'], req.ip);
+  }
+
+  // ─── Привязка почты (для вошедших через Telegram) ──────────────────────────
+
+  @Post('email/link/request-code')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async requestEmailLinkCode(@CurrentUser() user: JwtPayload, @Body() dto: RequestCodeDto, @Req() req: Request) {
+    return this.authService.requestEmailLinkCode(user.id, dto.email, req.ip);
+  }
+
+  @Post('email/link/verify-code')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async verifyEmailLink(@CurrentUser() user: JwtPayload, @Body() dto: VerifyCodeDto) {
+    return this.authService.verifyEmailLink(user.id, dto.email, dto.code);
   }
 
   @Post('logout')

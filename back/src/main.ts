@@ -14,6 +14,8 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   // за ngrok / reverse-proxy: req.ip = реальный клиент из X-Forwarded-For (лимиты кодов, сессии)
   app.set('trust proxy', 1);
+  // onModuleDestroy на SIGTERM: бот отпускает getUpdates до старта нового процесса (иначе 409 после hot reload)
+  app.enableShutdownHooks();
 
   const config = app.get(ConfigService);
 

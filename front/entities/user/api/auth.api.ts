@@ -6,6 +6,11 @@ type RequestCodeBody = { email: string }
 type VerifyCodeBody = { email: string; code: string }
 
 export type Session = { id: string; createdAt: string; expiresAt: string; deviceName: string; isCurrent: boolean }
+export type TelegramLink = { url: string; expiresIn: number }
+export type TelegramLoginStart = TelegramLink & { token: string }
+export type TelegramLoginPoll =
+  | { status: "pending" | "cancelled" }
+  | ({ status: "ok" } & AuthResponse)
 export type UserStats = { organizations: number; products: number; statforms: number }
 
 const authApi = baseApi.injectEndpoints({
@@ -43,6 +48,26 @@ const authApi = baseApi.injectEndpoints({
       query: () => ({ url: "/auth/sessions/revoke-others", method: "POST" }),
       invalidatesTags: ["Sessions"],
     }),
+    telegramLoginStart: build.mutation<TelegramLoginStart, void>({
+      query: () => ({ url: "/auth/telegram/start", method: "POST" }),
+    }),
+    telegramLoginPoll: build.mutation<TelegramLoginPoll, { token: string }>({
+      query: (body) => ({ url: "/auth/telegram/poll", method: "POST", body }),
+    }),
+    requestEmailLinkCode: build.mutation<{ message: string }, RequestCodeBody>({
+      query: (body) => ({ url: "/auth/email/link/request-code", method: "POST", body }),
+    }),
+    verifyEmailLink: build.mutation<User, VerifyCodeBody>({
+      query: (body) => ({ url: "/auth/email/link/verify-code", method: "POST", body }),
+      invalidatesTags: ["User"],
+    }),
+    createTelegramLink: build.mutation<TelegramLink, void>({
+      query: () => ({ url: "/telegram/link", method: "POST" }),
+    }),
+    unlinkTelegram: build.mutation<{ linked: false }, void>({
+      query: () => ({ url: "/telegram/link", method: "DELETE" }),
+      invalidatesTags: ["User"],
+    }),
     getStats: build.query<UserStats, void>({
       query: () => "/auth/stats",
       providesTags: ["Stats"],
@@ -61,4 +86,10 @@ export const {
   useGetSessionsQuery,
   useRevokeOtherSessionsMutation,
   useGetStatsQuery,
+  useCreateTelegramLinkMutation,
+  useUnlinkTelegramMutation,
+  useTelegramLoginStartMutation,
+  useTelegramLoginPollMutation,
+  useRequestEmailLinkCodeMutation,
+  useVerifyEmailLinkMutation,
 } = authApi

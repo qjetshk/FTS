@@ -17,7 +17,16 @@ export {
   useGetSessionsQuery,
   useRevokeOtherSessionsMutation,
   useGetStatsQuery,
+  useCreateTelegramLinkMutation,
+  useUnlinkTelegramMutation,
+  useTelegramLoginStartMutation,
+  useTelegramLoginPollMutation,
+  useRequestEmailLinkCodeMutation,
+  useVerifyEmailLinkMutation,
   type Session,
+  type TelegramLoginPoll,
+  type TelegramLink,
   type UserStats,
 } from "./api/auth.api"
 export { useUser } from "./lib/use-user.lib"
+export { userContact } from "./lib/user-contact.util"

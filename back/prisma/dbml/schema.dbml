@@ -4,11 +4,13 @@
 
 Table users {
   id String [pk]
-  email String [unique, not null]
+  email String [unique]
   name String
   avatarUrl String
   isEmailVerified Boolean [not null, default: false]
   isOnboardingComplete Boolean [not null, default: false]
+  telegramChatId BigInt [unique]
+  telegramUsername String
   plan PLAN [not null, default: 'TRIAL']
   planExpiresAt DateTime
   planStatus PLAN_STATUS [not null, default: 'ACTIVE']

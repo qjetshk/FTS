@@ -5,6 +5,11 @@ import { plainToInstance, type ClassConstructor } from 'class-transformer';
 import { validate, type ValidationError } from 'class-validator';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { EmailProducerService, type EnqueueResult } from 'src/email-producer/email-producer.service';
+import { TelegramService } from 'src/telegram/telegram.service';
+import { StatformFileService } from 'src/statform/statform-file.service';
+import { RedisService } from 'src/redis/redis.service';
+import { escapeHtml } from 'src/telegram/telegram.format';
+import { TELEGRAM_MESSAGES, type TelegramMessage } from './telegram.messages';
 import { SendNotificationDto } from './dto/send-notification.dto';
 import {
   NOTIFICATION_ACTION_PATH,
@@ -14,6 +19,8 @@ import {
 } from './notification.events';
 
 const DEDUP_TTL = 24 * 60 * 60 * 1000; // повтор того же события в течение суток отбрасывается
+// сбои, о которых админ узнаёт сразу (в TELEGRAM_ADMIN_CHAT_ID), не дожидаясь жалобы юзера
+const ADMIN_ALERT_EVENTS: NotificationEvent[] = ['statform.failed', 'ozon.api-error'];
 
 // Хэш, не зависящий от порядка ключей и элементов массивов: тот же набор товаров в другом порядке — тот же хэш
 function contentHash(value: unknown): string {
@@ -44,6 +51,9 @@ export class NotificationService {
     private prisma: PrismaService,
     private config: ConfigService,
     private emailProducer: EmailProducerService,
+    private telegram: TelegramService,
+    private statformFile: StatformFileService,
+    private redis: RedisService,
   ) {}
 
   // Из n8n: payload приходит сырым → валидируем по классу конкретного события
@@ -73,7 +83,11 @@ export class NotificationService {
   ): Promise<EnqueueResult> {
     const org = await this.prisma.organization.findUnique({
       where: { id: organizationId },
-      select: { fullOrg: true, user: { select: { email: true, name: true } } },
+      select: {
+        fullOrg: true,
+        ozonClientId: true,
+        user: { select: { email: true, name: true, telegramChatId: true } },
+      },
     });
     if (!org) {
       this.logger.warn(`Skip ${event}: organization ${organizationId} not found`);
@@ -83,17 +97,57 @@ export class NotificationService {
     const frontendUrl = this.config.get<string>('FRONTEND_URL', 'http://localhost:3000');
     const path = NOTIFICATION_ACTION_PATH[event] as string | ((p: NotificationPayload<E>) => string);
     const actionPath = typeof path === 'function' ? path(payload) : path;
-    return this.emailProducer.sendNotification(
-      event,
-      {
-        to: org.user.email,
-        name: org.user.name,
-        orgName: org.fullOrg,
-        actionUrl: `${frontendUrl}${actionPath}`,
-        ...payload,
-      },
-      // дубль = то же событие + тот же ключ + то же содержимое (другие товары за тот же период → новое письмо)
-      dedupKey ? { id: `${event}_${dedupKey}_${contentHash(payload)}`, ttl: DEDUP_TTL } : undefined,
-    );
+    const actionUrl = `${frontendUrl}${actionPath}`;
+
+    // дубль = то же событие + тот же ключ + то же содержимое (другие товары за тот же период → новое уведомление)
+    // дедуп в Redis, а не только в BullMQ: у вошедших через Telegram почты может не быть
+    const dedupId = dedupKey ? `${event}_${dedupKey}_${contentHash(payload)}` : undefined;
+    if (dedupId && !(await this.redis.setIfAbsent(`notify:${dedupId}`, '1', DEDUP_TTL / 1000))) {
+      this.logger.log(`Deduplicated ${event} for org ${organizationId}: ${dedupId}`);
+      return { deduplicated: true };
+    }
+
+    const { email, name, telegramChatId: chatId } = org.user;
+    const result: EnqueueResult = email
+      ? await this.emailProducer.sendNotification(
+          event,
+          { to: email, name, orgName: org.fullOrg, actionUrl, ...payload },
+          dedupId ? { id: dedupId, ttl: DEDUP_TTL } : undefined,
+        )
+      : { deduplicated: false };
+
+    // Telegram — доп. канал (или единственный у юзера без почты); ошибки не ломают основной поток
+    if (chatId) {
+      this.sendTelegram(chatId, event, payload, { orgName: org.fullOrg, actionUrl }).catch((e) =>
+        this.logger.error(`Telegram ${event} to chat ${chatId} failed: ${(e as Error).message}`),
+      );
+    }
+    if (ADMIN_ALERT_EVENTS.includes(event)) {
+      const reason = 'reason' in payload && payload.reason ? `\n${escapeHtml(String(payload.reason))}` : '';
+      const cause = 'cause' in payload && payload.cause ? ` · ${payload.cause}` : '';
+      void this.telegram.alertAdmin(
+        `🚨 <b>${event}</b>${cause}\n${escapeHtml(org.fullOrg)} (client ${org.ozonClientId})${reason}`,
+      );
+    }
+    return result;
+  }
+
+  private async sendTelegram<E extends NotificationEvent>(
+    chatId: bigint,
+    event: E,
+    payload: NotificationPayload<E>,
+    ctx: { orgName: string; actionUrl: string },
+  ) {
+    const render = TELEGRAM_MESSAGES[event] as (p: NotificationPayload<E>, c: typeof ctx) => TelegramMessage;
+    const { html, buttons } = render(payload, ctx);
+    await this.telegram.sendMessage(chatId, html, buttons);
+
+    // готовые XML — следом отдельными файлами, как вложения в письме
+    if (event === 'statform.ready') {
+      for (const id of (payload as NotificationPayload<'statform.ready'>).statformIds) {
+        const { filename, content } = await this.statformFile.getStatformFile(id);
+        await this.telegram.sendDocument(chatId, filename, content);
+      }
+    }
   }
 }

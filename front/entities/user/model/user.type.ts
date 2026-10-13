@@ -3,7 +3,8 @@ export type UserPlanStatus = "ACTIVE" | "EXPIRED" | "CANCELLED"
 
 export type User = {
   id: string
-  email: string
+  // null — вошёл через Telegram и ещё не привязал почту
+  email: string | null
   // null до шага «как вас зовут» после первого входа
   name: string | null
   plan: UserPlan
@@ -12,6 +13,9 @@ export type User = {
   createdAt: string
   avatarUrl: string | null
   isOnboardingComplete: boolean
+  // Telegram привязан — уведомления дублируются в бота
+  telegramLinked: boolean
+  telegramUsername: string | null
 }
 
 export type AuthResponse = {

@@ -1,4 +1,4 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
@@ -12,6 +12,11 @@ import { VerifyCodeDto } from './dto/verify-code.dto';
 import { JwtPayload, StringValue } from './interfaces/jwt.interface';
 import { convertExpireTime } from 'src/utils/convert-expire-time.util';
 import { PLAN, PLAN_STATUS } from '@prisma/client';
+import { TelegramService } from 'src/telegram/telegram.service';
+import { escapeHtml } from 'src/telegram/telegram.format';
+import { USER_VIEW_SELECT, toUserView } from './user-view';
+
+export type TelegramIdentity = { chatId: bigint; username: string | null; name: string };
 
 @Injectable()
 export class AuthService {
@@ -24,6 +29,7 @@ export class AuthService {
     private redis: RedisService,
     private emailProducer: EmailProducerService,
     private emailCode: EmailCodeService,
+    private telegram: TelegramService,
   ) {}
 
   // ─── Email code (вход = регистрация) ──────────────────────────────────────────
@@ -39,30 +45,81 @@ export class AuthService {
     await this.emailCode.consume(dto.email, dto.code);
 
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    const user = existing ?? (await this.createUser(dto.email));
+    const user = existing ?? (await this.createUser({ email: dto.email }));
 
     if (!user.isEmailVerified) {
       await this.prisma.user.update({ where: { id: user.id }, data: { isEmailVerified: true } });
     }
 
     if (!existing) {
-      this.emailProducer.sendWelcome(user.email).catch((e) =>
+      this.emailProducer.sendWelcome(dto.email).catch((e) =>
         this.logger.error(`welcome email failed: ${e.message}`),
       );
+      void this.telegram.alertAdmin(`🆕 Новый пользователь: ${escapeHtml(dto.email)}`);
     }
 
     return this.issueTokens(user.id, res, userAgent, ipAddress);
   }
 
-  private async createUser(email: string) {
+  // ─── Telegram (вход = регистрация, почта не нужна) ────────────────────────────
+
+  // подтверждение в боте проверяет TelegramLoginService; сюда приходит уже проверенный chat_id
+  async loginWithTelegram(tg: TelegramIdentity, res: Response, userAgent?: string, ipAddress?: string) {
+    const existing = await this.prisma.user.findUnique({ where: { telegramChatId: tg.chatId } });
+    const user = existing
+      ? await this.prisma.user.update({ where: { id: existing.id }, data: { telegramUsername: tg.username } })
+      : await this.createUser({ name: tg.name || null, telegramChatId: tg.chatId, telegramUsername: tg.username });
+
+    if (!existing) {
+      const who = tg.username ? `@${tg.username}` : escapeHtml(tg.name);
+      void this.telegram.alertAdmin(`🆕 Новый пользователь через Telegram: ${who}`);
+    }
+    return this.issueTokens(user.id, res, userAgent, ipAddress);
+  }
+
+  // ─── Привязка почты к аккаунту без неё (зарегистрировался через Telegram) ────────
+
+  async requestEmailLinkCode(userId: string, email: string, ipAddress?: string) {
+    await this.assertEmailFree(userId, email);
+    const code = await this.emailCode.issue(email, ipAddress);
+    await this.emailProducer.sendLoginCode(email, code);
+    return { message: 'Код отправлен' };
+  }
+
+  async verifyEmailLink(userId: string, email: string, code: string) {
+    await this.emailCode.consume(email, code);
+    // повторная проверка: почту могли занять, пока шёл код
+    await this.assertEmailFree(userId, email);
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { email, isEmailVerified: true },
+      select: USER_VIEW_SELECT,
+    });
+    return toUserView(user);
+  }
+
+  // без автослияния аккаунтов: занятая почта = другой аккаунт, юзер решает сам
+  private async assertEmailFree(userId: string, email: string) {
+    const owner = await this.prisma.user.findUnique({ where: { email }, select: { id: true } });
+    if (owner && owner.id !== userId) {
+      throw new ConflictException('Эта почта уже используется другим аккаунтом easyfts — войдите в него по коду на почту');
+    }
+  }
+
+  private async createUser(data: {
+    email?: string;
+    name?: string | null;
+    telegramChatId?: bigint;
+    telegramUsername?: string | null;
+  }) {
     const trialDays = 7;
     const planExpiresAt = new Date();
     planExpiresAt.setDate(planExpiresAt.getDate() + trialDays);
 
     const user = await this.prisma.user.create({
       data: {
-        email,
-        isEmailVerified: true,
+        ...data,
+        isEmailVerified: !!data.email,
         plan: PLAN.TRIAL,
         planStatus: PLAN_STATUS.ACTIVE,
         planExpiresAt,
@@ -138,20 +195,14 @@ export class AuthService {
       path: '/',
     });
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true, email: true, name: true, plan: true, planStatus: true,
-        planExpiresAt: true, createdAt: true, avatarUrl: true, isOnboardingComplete: true,
-      },
-    });
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: USER_VIEW_SELECT });
 
-    return { accessToken, user };
+    return { accessToken, user: user && toUserView(user) };
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-  private parseDevice(userAgent: string | undefined): string {
+  parseDevice(userAgent: string | undefined): string {
     if (!userAgent) return 'Неизвестное устройство';
     if (/mobile|android|iphone|ipad/i.test(userAgent)) return 'Мобильный браузер';
     if (/edg\//i.test(userAgent)) return 'Microsoft Edge';
@@ -162,7 +213,7 @@ export class AuthService {
     return 'Браузер';
   }
 
-  private async issueTokens(
+  async issueTokens(
     userId: string,
     res: Response,
     userAgent?: string,
@@ -216,45 +267,17 @@ export class AuthService {
       path: '/',
     });
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        plan: true,
-        planStatus: true,
-        planExpiresAt: true,
-        createdAt: true,
-        avatarUrl: true,
-        isOnboardingComplete: true,
-      },
-    });
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: USER_VIEW_SELECT });
 
-    return { accessToken, user };
+    return { accessToken, user: user && toUserView(user) };
   }
 
   // ─── Me ───────────────────────────────────────────────────────────────────────
 
   async getMe(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        plan: true,
-        planStatus: true,
-        planExpiresAt: true,
-        createdAt: true,
-        avatarUrl: true,
-        isOnboardingComplete: true,
-      },
-    });
-
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: USER_VIEW_SELECT });
     if (!user) throw new UnauthorizedException('Пользователь не найден');
-
-    return user;
+    return toUserView(user);
   }
 
   async updateProfile(userId: string, dto: { name: string }) {

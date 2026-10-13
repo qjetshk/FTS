@@ -11,7 +11,7 @@ import {
 } from "@/shared/ui"
 import { ROUTES } from "@/shared/config"
 import { cn } from "@/shared/lib"
-import { useUser, useLogoutMutation } from "@/entities/user"
+import { useUser, useLogoutMutation, userContact } from "@/entities/user"
 
 const MENU_ITEM_CLASS =
   "flex cursor-pointer items-center gap-2.5 w-full px-3 py-2 text-sm text-left rounded-md transition-colors hover:bg-sidebar-accent"
@@ -75,7 +75,7 @@ export function UserFooter() {
           >
             <div className="px-3 py-2 border-b border-border mb-1">
               <p className="text-xs font-medium truncate">{user?.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              <p className="text-xs text-muted-foreground truncate">{userContact(user)}</p>
             </div>
             <Link href={ROUTES.account} onClick={() => setMenuOpen(false)} className={MENU_ITEM_CLASS}>
               <CircleUser strokeWidth={1.5} className="size-4 text-muted-foreground shrink-0" />Аккаунт
@@ -106,7 +106,7 @@ export function UserFooter() {
               <>
                 <div className="flex flex-1 flex-col text-left text-xs min-w-0">
                   <span className="font-medium text-sidebar-foreground truncate">{user?.name}</span>
-                  <span className="text-muted-foreground truncate">{user?.email}</span>
+                  <span className="text-muted-foreground truncate">{userContact(user)}</span>
                 </div>
                 <ChevronsUpDown strokeWidth={1.5} className="ml-auto size-4 text-muted-foreground shrink-0" />
               </>
