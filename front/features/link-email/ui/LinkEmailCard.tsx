@@ -49,7 +49,7 @@ export function LinkEmailCard() {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border px-3 py-3">
+    <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
       <div className="flex items-center gap-3">
         <Mail strokeWidth={1.5} className="size-4 shrink-0 text-muted-foreground" />
         <div className="flex flex-col gap-0.5">

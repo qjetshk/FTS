@@ -40,7 +40,16 @@ type OrgCrumbProps = {
   pageBase: string  // куда навигировать при выборе
 }
 
-function OrgCrumb({ pageBase }: OrgCrumbProps) {
+// useSearchParams требует Suspense — без него Next отключает статическую отрисовку страницы целиком
+function OrgCrumb(props: OrgCrumbProps) {
+  return (
+    <React.Suspense fallback={<span className="px-1.5 text-sm text-muted-foreground">Организация</span>}>
+      <OrgCrumbSelect {...props} />
+    </React.Suspense>
+  )
+}
+
+function OrgCrumbSelect({ pageBase }: OrgCrumbProps) {
   const { data: orgs = [] } = useGetAllOrgsQuery()
   const { data: firstOrg } = useGetFirstOrgQuery()
   const searchParams = useSearchParams()

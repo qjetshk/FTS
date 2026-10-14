@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { AnimatePresence, m } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
@@ -20,32 +20,22 @@ const variants = {
 
 export function OnboardingWizard() {
   const router = useRouter()
-  const { step, orgData, clientId, setStep, setOrgData, setApiKeys } = useOnboardingStore()
+  const { step, orgData, clientId, setStep, setOrgData, setApiKeys, resume } = useOnboardingStore()
   const [classify] = useClassifyMutation()
+  const resumed = useRef(false)
 
   const { data: existingOrg, isLoading: orgLoading } = useGetFirstOrgQuery(undefined, {
     // не бросаем ошибку если орги нет — это нормальное состояние для шага 1
   })
 
+  // шаг восстанавливаем один раз при открытии: раньше каждый refetch орги (например, после сохранения
+  // на шаге 2) заново выставлял шаг и повторно запускал классификацию товаров
   useEffect(() => {
-    if (orgLoading) return
-    if (!existingOrg) {
-      setStep(1)
-      return
-    }
-    const hasDocument = !!existingOrg.declarant?.document
-    if (!hasDocument) {
-      setOrgData(existingOrg)
-      setApiKeys("", String(existingOrg.ozonClientId))
-      setStep(2)
-    } else {
-      setOrgData(existingOrg)
-      setApiKeys("", String(existingOrg.ozonClientId))
-      classify({ clientId: String(existingOrg.ozonClientId) })
-      setStep(3)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgLoading, existingOrg])
+    if (orgLoading || resumed.current) return
+    resumed.current = true
+    resume(existingOrg ?? null)
+    if (existingOrg?.declarant?.document) classify({ clientId: String(existingOrg.ozonClientId) })
+  }, [orgLoading, existingOrg, resume, classify])
 
   if (orgLoading) {
     return (
