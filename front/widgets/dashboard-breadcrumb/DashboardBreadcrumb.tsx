@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname, useSearchParams } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { Building2, Check, ChevronsUpDown, Search } from "lucide-react"
 import {
   Breadcrumb,
@@ -13,7 +13,7 @@ import {
   BreadcrumbSeparator,
 } from "@/shared/ui"
 import { ROUTES } from "@/shared/config"
-import { useGetAllOrgsQuery, useGetFirstOrgQuery } from "@/entities/organization"
+import { useGetAllOrgsQuery, useGetFirstOrgQuery, useSelectedOrgId } from "@/entities/organization"
 
 const SEGMENT_LABELS: Record<string, string> = {
   dashboard: "Дашборд",
@@ -40,7 +40,7 @@ type OrgCrumbProps = {
   pageBase: string  // куда навигировать при выборе
 }
 
-// useSearchParams требует Suspense — без него Next отключает статическую отрисовку страницы целиком
+// useSelectedOrgId читает useSearchParams — без Suspense Next отключает статическую отрисовку страницы целиком
 function OrgCrumb(props: OrgCrumbProps) {
   return (
     <React.Suspense fallback={<span className="px-1.5 text-sm text-muted-foreground">Организация</span>}>
@@ -52,13 +52,12 @@ function OrgCrumb(props: OrgCrumbProps) {
 function OrgCrumbSelect({ pageBase }: OrgCrumbProps) {
   const { data: orgs = [] } = useGetAllOrgsQuery()
   const { data: firstOrg } = useGetFirstOrgQuery()
-  const searchParams = useSearchParams()
+  const selectedId = useSelectedOrgId()
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
   const ref = React.useRef<HTMLDivElement>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
 
-  const selectedId = searchParams?.get("orgId") ?? orgs[0]?.id
   const selectedOrg = orgs.find((o) => o.id === selectedId) ?? orgs[0]
   const name = selectedOrg?.fullOrg ?? firstOrg?.fullOrg ?? "Организация"
 

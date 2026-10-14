@@ -5,6 +5,7 @@ import { useDispatch } from "react-redux"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { useAuthEventStream, type StreamEvent } from "@/shared/api"
+import { useSelectedOrgId } from "@/entities/organization"
 import { ROUTES } from "@/shared/config"
 import {
   useGetStatformRunsQuery,
@@ -22,7 +23,9 @@ const filesLabel = (n: number) => `${n} ${n === 1 ? "файл" : n < 5 ? "фай
 export function useStatformRunEvents() {
   const dispatch = useDispatch<StatformApiDispatch>()
   const router = useRouter()
-  const { data } = useGetStatformRunsQuery()
+  // статусы прогонов открытой организации — чтобы не показать тоаст о прогоне, который уже был завершён до загрузки
+  const orgId = useSelectedOrgId()
+  const { data } = useGetStatformRunsQuery(orgId ?? "", { skip: !orgId })
 
   // последний известный статус каждого прогона — чтобы тоаст был только на переходе, а не на каждом событии
   const statuses = useRef(new Map<string, StatFormRunStatus>())

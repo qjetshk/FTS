@@ -3,6 +3,7 @@ import type { StatFormRun } from "../model/statform.type"
 export const MOCK_RUNS: StatFormRun[] = [
   {
     id: "r1",
+    organizationId: "org1",
     period: "2026-05",
     status: "READY",
     stage: null,
@@ -17,6 +18,7 @@ export const MOCK_RUNS: StatFormRun[] = [
   },
   {
     id: "r2",
+    organizationId: "org1",
     period: "2026-04",
     status: "PARTIAL",
     stage: null,
@@ -29,6 +31,7 @@ export const MOCK_RUNS: StatFormRun[] = [
   },
   {
     id: "r3",
+    organizationId: "org1",
     period: "2026-03",
     status: "FAILED",
     stage: null,

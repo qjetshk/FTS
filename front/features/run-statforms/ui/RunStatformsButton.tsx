@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Loader2, Play } from "lucide-react"
 import { Button } from "@/shared/ui"
+import { useSelectedOrgId } from "@/entities/organization"
 import { getApiErrorMessage, getApiRetryAfter } from "@/shared/lib"
 import {
   useRunStatformsMutation,
@@ -17,8 +18,9 @@ import {
 // Настоящая защита — на бэке (409 активный прогон / 429 лимит), здесь — чтобы не спамить запросами.
 export function RunStatformsButton() {
   const period = previousMonth()
+  const orgId = useSelectedOrgId()
   const [run, { isLoading }] = useRunStatformsMutation()
-  const { data: runs } = useGetStatformRunsQuery()
+  const { data: runs } = useGetStatformRunsQuery(orgId ?? "", { skip: !orgId })
   const [blockedUntil, setBlockedUntil] = useState(0)
   const [now, setNow] = useState(() => Date.now())
 
@@ -33,8 +35,9 @@ export function RunStatformsButton() {
   }, [blockedUntil])
 
   async function handleClick() {
+    if (!orgId) return
     try {
-      await run({ period }).unwrap()
+      await run({ period, orgId }).unwrap()
       toast.success(`Генерация за ${formatPeriodTitle(period)} запущена`)
     } catch (e) {
       const retryAfter = getApiRetryAfter(e)

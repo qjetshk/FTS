@@ -157,11 +157,14 @@ export class StatformService {
   }
 
   // ── Получить organizationId по userId ─────────────────────────────────────
-  async getOrgByUserId(userId: string) {
+  // Орга, с которой работает юзер: выбранная в бредкрамбе (orgId) или первая по дате создания — как в get-all/get-first.
+  // orgId чужой организации → 404, а не доступ к чужим статформам
+  async resolveUserOrg(userId: string, orgId?: string) {
     const org = await this.prisma.organization.findFirst({
-      where: { userId },
+      where: { userId, ...(orgId && { id: orgId }) },
+      orderBy: { createdAt: 'asc' },
     });
-    if (!org) throw new NotFoundException('Organization not found');
+    if (!org) throw new NotFoundException('Организация не найдена');
     return org;
   }
 

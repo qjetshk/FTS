@@ -13,6 +13,7 @@ export type StatForm = {
 
 export type StatFormRun = {
   id: string
+  organizationId: string
   period: string
   status: StatFormRunStatus
   stage: StatFormRunStage | null
@@ -22,5 +23,5 @@ export type StatFormRun = {
   statForms: StatForm[]
 }
 
-export type RunStatformsBody = { period: string }
+export type RunStatformsBody = { period: string; orgId: string }
 export type RunStatformsResponse = { queued: true; period: string }

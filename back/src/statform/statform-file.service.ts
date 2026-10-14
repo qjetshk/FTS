@@ -13,10 +13,11 @@ export const statformFilename = (country: string, period: string) => {
 export class StatformFileService {
   constructor(private prisma: PrismaService) {}
 
-  // organizationId не передаётся только из внутренних вызовов (email-worker, Telegram), там доступ уже проверен
-  async getStatformFile(id: string, organizationId?: string): Promise<{ filename: string; content: string }> {
+  // userId — скачивание из кабинета: статформа любой организации этого юзера.
+  // Без userId — внутренние вызовы (email-worker, Telegram), там доступ уже проверен
+  async getStatformFile(id: string, userId?: string): Promise<{ filename: string; content: string }> {
     const statform = await this.prisma.statForm.findFirst({
-      where: { id, ...(organizationId && { run: { organizationId } }), status: 'READY' },
+      where: { id, ...(userId && { run: { organization: { userId } } }), status: 'READY' },
       select: { country: true, encryptedXml: true, run: { select: { period: true } } },
     });
     if (!statform?.encryptedXml) throw new NotFoundException('Statform not found');

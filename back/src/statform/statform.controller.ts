@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Param,
+  Query,
   Body,
   Res,
   Sse,
@@ -46,7 +47,7 @@ export class StatformController {
     @Body() dto: RunStatformDto,
     @CurrentUser() user: { id: string },
   ) {
-    const org = await this.statformService.getOrgByUserId(user.id);
+    const org = await this.statformService.resolveUserOrg(user.id, dto.orgId);
     return this.statformService.runStatform(org, dto.period);
   }
 
@@ -98,11 +99,11 @@ export class StatformController {
     return this.runEvents.stream(user.id);
   }
 
-  // ── Список ранов текущего пользователя ───────────────────────────────────
+  // ── Список ранов выбранной организации ───────────────────────────────────
   @Get()
   @UseGuards(JwtAuthGuard)
-  async getStatforms(@CurrentUser() user: { id: string }) {
-    const org = await this.statformService.getOrgByUserId(user.id);
+  async getStatforms(@CurrentUser() user: { id: string }, @Query('orgId') orgId?: string) {
+    const org = await this.statformService.resolveUserOrg(user.id, orgId);
     return this.statformService.getStatforms(org.id);
   }
 
@@ -114,8 +115,7 @@ export class StatformController {
     @CurrentUser() user: { id: string },
     @Res() res: Response,
   ) {
-    const org = await this.statformService.getOrgByUserId(user.id);
-    const { filename, content } = await this.statformFile.getStatformFile(id, org.id);
+    const { filename, content } = await this.statformFile.getStatformFile(id, user.id);
 
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
