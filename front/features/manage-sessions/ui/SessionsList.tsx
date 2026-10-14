@@ -1,13 +1,15 @@
 "use client"
 
-import { useState } from "react"
 import { toast } from "sonner"
-import { MonitorSmartphone, ChevronDown } from "lucide-react"
-import { m, AnimatePresence } from "framer-motion"
+import { MonitorSmartphone } from "lucide-react"
 import { Button, Skeleton } from "@/shared/ui"
 import { useGetSessionsQuery, useRevokeOtherSessionsMutation } from "@/entities/user"
 
-const VISIBLE_COUNT = 3
+// ~2.5 строки: половинка третьей показывает, что список скроллится
+const LIST_MAX_HEIGHT = "max-h-[10.5rem]"
+// тень снизу, пока есть что скроллить: «крышка» цвета карточки едет с контентом (local) и в конце закрывает тень (scroll)
+const SCROLL_SHADOW =
+  "[background:linear-gradient(transparent,var(--card)_70%)_0_100%/100%_24px_no-repeat_local,linear-gradient(to_top,rgb(0_0_0/0.06),transparent)_0_100%/100%_14px_no-repeat_scroll]"
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("ru-RU", {
@@ -41,7 +43,6 @@ function SessionRow({ session }: { session: { id: string; deviceName: string; cr
 export function SessionsList() {
   const { data: sessions, isLoading } = useGetSessionsQuery()
   const [revokeOthers, { isLoading: revoking }] = useRevokeOtherSessionsMutation()
-  const [expanded, setExpanded] = useState(false)
 
   const handleRevoke = async () => {
     try {
@@ -64,55 +65,18 @@ export function SessionsList() {
   if (!sessions?.length) return null
 
   const otherCount = sessions.filter((s) => !s.isCurrent).length
-  const hasMore = sessions.length > VISIBLE_COUNT
-  const hiddenCount = sessions.length - VISIBLE_COUNT
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2">
-        {/* Первые N — всегда видны */}
-        {sessions.slice(0, VISIBLE_COUNT).map((s) => (
+    <div className="flex h-full flex-col gap-3">
+      <div className={`flex flex-col gap-2 overflow-y-auto overscroll-contain ${LIST_MAX_HEIGHT} ${SCROLL_SHADOW}`}>
+        {sessions.map((s) => (
           <SessionRow key={s.id} session={s} />
         ))}
-
-        {/* Остальные — появляются при expand */}
-        <AnimatePresence initial={false}>
-          {expanded && (
-            <m.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.22, ease: "easeOut" }}
-              className="overflow-hidden flex flex-col gap-2"
-            >
-              {sessions.slice(VISIBLE_COUNT).map((s) => (
-                <SessionRow key={s.id} session={s} />
-              ))}
-            </m.div>
-          )}
-        </AnimatePresence>
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap">
-        {hasMore && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground h-auto px-2 py-1 gap-1"
-            onClick={() => setExpanded((v) => !v)}
-          >
-            <m.span
-              animate={{ rotate: expanded ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-              className="inline-flex"
-            >
-              <ChevronDown className="size-3.5" />
-            </m.span>
-            {expanded ? "Свернуть" : `Ещё ${hiddenCount}`}
-          </Button>
-        )}
-
-        {otherCount > 0 && (
+      {otherCount > 0 && (
+        // mt-auto — кнопка у низа карточки, на одной линии с действиями соседних карточек
+        <div className="mt-auto">
           <Button
             variant="outline"
             size="sm"
@@ -122,8 +86,8 @@ export function SessionsList() {
           >
             {revoking ? "Завершаем..." : `Завершить другие (${otherCount})`}
           </Button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

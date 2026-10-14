@@ -94,7 +94,7 @@ export function OrgForm({ org, onSaved }: Props) {
         {/* Декларант */}
         <section className="flex flex-col gap-3">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Декларант</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 @4xl:grid-cols-3 gap-3">
             {ip ? (
               <>
                 <FieldReadonly label="Имя" value={org.declarant?.name} />
@@ -137,7 +137,7 @@ export function OrgForm({ org, onSaved }: Props) {
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
             {hasDoc ? "Документ декларанта" : "Документ декларанта (не заполнен)"}
           </h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 @4xl:grid-cols-3 gap-3">
             <FormField control={form.control} name="docTypeCode" render={({ field, fieldState }) => (
               <DocTypeSelect field={field} fieldState={fieldState} onValueChange={(short) => form.setValue("docTypeShort", short)} />
             )} />

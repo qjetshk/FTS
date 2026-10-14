@@ -67,7 +67,7 @@ export function NotificationSettings() {
 
       {(!hasTelegram || !hasEmail) && (
         <p className="text-xs text-muted-foreground">
-          {hasTelegram ? "Привяжите почту, чтобы получать уведомления и туда" : "Привяжите Telegram выше, чтобы получать уведомления в мессенджер"}
+          {hasTelegram ? "Привяжите почту выше, чтобы получать уведомления и туда" : "Привяжите Telegram выше, чтобы получать уведомления в мессенджер"}
         </p>
       )}
     </div>

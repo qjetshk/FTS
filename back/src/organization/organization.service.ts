@@ -102,8 +102,10 @@ export class OrganizationService {
   }
 
   async getFirstOrganization(userId: string) {
+    // тот же порядок, что в get-all: «первая» на странице и в бредкрамбе должна совпадать
     const organization = await this.prisma.organization.findFirst({
       where: { userId },
+      orderBy: { createdAt: 'asc' },
       include: {
         declarant: {
           select: {

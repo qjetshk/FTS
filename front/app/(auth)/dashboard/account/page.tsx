@@ -7,7 +7,7 @@ import { EditProfileForm } from "@/features/edit-profile"
 import { SessionsList } from "@/features/manage-sessions"
 import { NotificationSettings } from "@/features/notification-settings"
 import { TelegramLinkCard } from "@/features/link-telegram"
-import { LinkEmailCard } from "@/features/link-email"
+import { EmailChannelRow, LinkEmailCard } from "@/features/link-email"
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Skeleton } from "@/shared/ui"
 
 const PLAN_LABEL: Record<string, string> = {
@@ -35,28 +35,31 @@ export default function AccountPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6 max-w-4xl">
+      <div className="flex flex-col gap-6">
         <Skeleton className="h-8 w-40" />
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-          <Skeleton className="h-64 w-full" />
-          <div className="flex flex-col gap-6">
-            <Skeleton className="h-28 w-full" />
-            <Skeleton className="h-28 w-full" />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          <Skeleton className="h-72 w-full" />
+          <Skeleton className="h-72 w-full" />
+          <Skeleton className="h-72 w-full" />
+          <Skeleton className="h-32 w-full xl:col-span-3" />
         </div>
-        <Skeleton className="h-40 w-full" />
       </div>
     )
   }
 
   if (!user) return null
 
+  const planExpiry = user.planExpiresAt
+    ? `${user.planStatus === "EXPIRED" ? "Истёк" : "Действует до"} ${formatDate(user.planExpiresAt)}`
+    : "Бессрочно"
+
+  // Сетка, а не ряды из двух колонок: карточки одного ряда тянутся до общей высоты (нет дыр),
+  // «Тариф и оплата» на широком экране — во всю ширину (там будет история платежей)
   return (
-    <div className="flex flex-col gap-6 max-w-4xl">
+    <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold text-foreground">Аккаунт</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-        {/* Профиль — левая колонка, растягивается под высоту правой */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         <Card className="flex flex-col">
           <CardHeader>
             <CardTitle className="text-base">Профиль</CardTitle>
@@ -69,7 +72,7 @@ export default function AccountPage() {
                   alt={user.name ?? ""}
                   width={56}
                   height={56}
-                  className="rounded-full border border-border"
+                  className="shrink-0 rounded-full border border-border"
                   unoptimized
                 />
               ) : (
@@ -77,52 +80,35 @@ export default function AccountPage() {
                   {(user.name ?? userContact(user)).charAt(0).toUpperCase()}
                 </div>
               )}
-              <div className="flex flex-col gap-0.5">
-                <span className="font-medium">{user.name}</span>
-                <span className="text-sm text-muted-foreground">{userContact(user)}</span>
+              {/* колонка узкая — длинная почта не должна вылезать за карточку */}
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="truncate font-medium">{user.name}</span>
+                <span className="truncate text-sm text-muted-foreground" title={userContact(user)}>{userContact(user)}</span>
                 <span className="text-xs text-muted-foreground">
                   Аккаунт создан {formatDate(user.createdAt)}
                 </span>
               </div>
             </div>
-            {!user.email && <LinkEmailCard />}
             <EditProfileForm />
           </CardContent>
         </Card>
 
-        {/* Правая колонка */}
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Тарифный план</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <Badge variant={PLAN_VARIANT[user.plan] ?? "secondary"}>
-                  {PLAN_LABEL[user.plan] ?? user.plan}
-                </Badge>
-                {user.planStatus === "EXPIRED" && (
-                  <Badge variant="destructive">Истёк</Badge>
-                )}
-              </div>
-              {user.planExpiresAt && (
-                <p className="text-sm text-muted-foreground">
-                  {user.planStatus === "EXPIRED" ? "Истёк" : "Действует до"}{" "}
-                  {formatDate(user.planExpiresAt)}
-                </p>
-              )}
-              {user.plan === "TRIAL" && user.planStatus === "ACTIVE" && (
-                <p className="text-xs text-muted-foreground">
-                  После окончания пробного периода выберите подходящий тариф
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+        <Card id="notifications" className="flex flex-col">
+          <CardHeader>
+            <CardTitle className="text-base">Уведомления</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col gap-4">
+            {/* каналы: почта (или её привязка) и Telegram, ниже — куда слать */}
+            <div className="flex flex-col gap-2">
+              {user.email ? <EmailChannelRow email={user.email} /> : <LinkEmailCard />}
+              <TelegramLinkCard />
+            </div>
+            <div className="mt-auto">
+              <NotificationSettings />
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Сессии + Уведомления */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
         <Card className="flex flex-col">
           <CardHeader>
             <CardTitle className="text-base">Активные сессии</CardTitle>
@@ -132,46 +118,39 @@ export default function AccountPage() {
           </CardContent>
         </Card>
 
-        <Card id="notifications">
+        <Card id="billing" className="xl:col-span-3">
           <CardHeader>
-            <CardTitle className="text-base">Уведомления</CardTitle>
+            <CardTitle className="text-base">Тариф и оплата</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <TelegramLinkCard />
-            <NotificationSettings />
+          <CardContent className="flex flex-col gap-4 py-2 xl:flex-row xl:items-start xl:justify-between">
+            <div className="flex items-start gap-3">
+              <CreditCard strokeWidth={1.5} className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <Badge variant={PLAN_VARIANT[user.plan] ?? "secondary"}>
+                    {PLAN_LABEL[user.plan] ?? user.plan}
+                  </Badge>
+                  {user.planStatus === "EXPIRED" && <Badge variant="destructive">Истёк</Badge>}
+                  <span className="text-sm text-muted-foreground">{planExpiry}</span>
+                </div>
+                {user.plan === "TRIAL" && user.planStatus === "ACTIVE" && (
+                  <span className="text-xs text-muted-foreground">
+                    После окончания пробного периода выберите подходящий тариф
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
+              <p className="text-xs text-muted-foreground xl:max-w-sm xl:text-right">
+                История платежей, смена тарифа и управление подпиской появятся после подключения платёжной системы.
+              </p>
+              <Button variant="outline" size="sm" disabled className="shrink-0">
+                Управление — скоро
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Биллинг */}
-      <Card id="billing">
-        <CardHeader>
-          <CardTitle className="text-base">Биллинг</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <CreditCard strokeWidth={1.5} className="size-5 text-muted-foreground" />
-              <div className="flex flex-col gap-0.5">
-                <span className="text-sm font-medium">
-                  {PLAN_LABEL[user.plan] ?? user.plan} план
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {user.planExpiresAt
-                    ? `${user.planStatus === "EXPIRED" ? "Истёк" : "Действует до"} ${formatDate(user.planExpiresAt)}`
-                    : "Бессрочно"}
-                </span>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" disabled>
-              Управление — скоро
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            История платежей, смена тарифа и управление подпиской появятся после подключения платёжной системы.
-          </p>
-        </CardContent>
-      </Card>
     </div>
   )
 }

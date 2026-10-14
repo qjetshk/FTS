@@ -74,7 +74,7 @@ export function ApiKeyForm({ orgId, currentApiKey, clientId, userId }: Props) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4 pt-1">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 @4xl:grid-cols-3 gap-3">
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">User ID</span>
             <div className="h-9 px-3 flex items-center rounded-md border border-border bg-muted text-sm text-muted-foreground font-mono truncate">

@@ -31,8 +31,10 @@ function OrganizationsPageContent() {
 
   if (!org) return null
 
+  // key: формы берут значения из defaultValues один раз — без пересоздания при выборе другой орги
+  // в бредкрамбе остались бы поля предыдущей. @container — формы раскладываются по ширине страницы
   return (
-    <div className="flex flex-col gap-6 max-w-3xl">
+    <div key={org.id} className="@container flex flex-col gap-6">
 
       <Card>
         <CardContent className="pt-5 pb-5 flex flex-col gap-1">

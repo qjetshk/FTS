@@ -52,7 +52,7 @@ export function OrgDetailsForm({ org }: Props) {
 
         <section className="flex flex-col gap-3">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Реквизиты</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 @4xl:grid-cols-3 gap-3">
             <FieldReadonly label="Полное название" value={org.fullOrg} />
             <FieldReadonly label="ОПФ" value={org.fullOpf} />
             <FieldReadonly label="ИНН" value={org.inn} />
@@ -64,7 +64,7 @@ export function OrgDetailsForm({ org }: Props) {
 
         <section className="flex flex-col gap-3">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Адрес</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 @4xl:grid-cols-3 gap-3">
             <FieldReadonly label="Страна" value={org.country} />
             <FieldReadonly label="Регион" value={org.region} />
             <FieldReadonly label="Город" value={org.city} />
