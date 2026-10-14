@@ -3,6 +3,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { env } from 'process';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createBullBoard } from '@bull-board/api';
@@ -58,6 +59,8 @@ async function bootstrap() {
     app.use('/bull-board', basicAuth(boardUser, boardPassword), serverAdapter.getRouter());
   }
 
+  // заголовки безопасности (nosniff, frameguard, HSTS…); CSP не нужен JSON-API и сломал бы inline-скрипты Bull Board
+  app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cookieParser());
 
   app.setGlobalPrefix('api');

@@ -34,13 +34,12 @@ export class StatformCron {
     this.logger.log(`Scheduling monthly statforms for period ${period}`);
 
     const orgs = await this.prisma.organization.findMany({
-      select: { id: true, ozonClientId: true, ozonApiKey: true },
+      select: { id: true, ozonClientId: true },
     });
 
     const jobs: StatformJobData[] = orgs.map((org) => ({
       organizationId: org.id,
       ozonClientId: org.ozonClientId,
-      ozonApiKey: org.ozonApiKey,
       period,
       triggeredBy: 'cron',
     }));

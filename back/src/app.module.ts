@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { AppThrottlerGuard } from './guards/throttler.guard';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bullmq';
@@ -17,6 +20,9 @@ import { DEFAULT_JOB_OPTIONS } from './queue/queue.constants';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
+    // лимит по IP на все эндпоинты (точечные строже — @Throttle). Хранилище в памяти: один инстанс бэка;
+    // при масштабировании — Redis-хранилище, иначе лимит считается на каждый инстанс отдельно
+    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 120 }]),
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -40,5 +46,6 @@ import { DEFAULT_JOB_OPTIONS } from './queue/queue.constants';
     NotificationModule,
     TelegramModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: AppThrottlerGuard }],
 })
 export class AppModule {}

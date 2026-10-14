@@ -11,6 +11,7 @@ import {
   type MessageEvent,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { Observable } from 'rxjs';
 import { RunEventsService } from './run-events.service';
 import { StatformService } from './statform.service';
@@ -94,6 +95,7 @@ export class StatformController {
 
   // ── SSE: изменения прогонов текущего юзера в реальном времени ─────────────
   @Sse('events')
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   events(@CurrentUser() user: { id: string }): Observable<MessageEvent> {
     return this.runEvents.stream(user.id);

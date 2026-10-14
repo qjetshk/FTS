@@ -34,7 +34,12 @@ export class StatformProcessor implements OnModuleInit, OnModuleDestroy {
 
     this.worker = new Worker(QUEUE_STATFORM, async (job) => {
       if (job.name !== JOB_GENERATE_XML) return;
-      const { organizationId, period, ozonClientId, ozonApiKey } = job.data as StatformJobData;
+      const { organizationId, period } = job.data as StatformJobData;
+      // ключ и Client ID — актуальные из БД (юзер мог сменить ключ, пока задача ждала в очереди)
+      const org = await this.prisma.organization.findUniqueOrThrow({
+        where: { id: organizationId },
+        select: { ozonClientId: true, ozonApiKey: true },
+      });
 
       this.logger.log(`Job received: org=${organizationId} period=${period}`);
 
@@ -52,7 +57,7 @@ export class StatformProcessor implements OnModuleInit, OnModuleDestroy {
 
       await axios.post(
         webhookUrl,
-        { client_id: ozonClientId, api_key: ozonApiKey, period },
+        { client_id: org.ozonClientId, api_key: org.ozonApiKey, period },
         { timeout: 10_000 },
       );
 

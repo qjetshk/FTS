@@ -216,7 +216,6 @@ export class StatformService {
     await this.producer.enqueue({
       organizationId: org.id,
       ozonClientId: org.ozonClientId,
-      ozonApiKey: org.ozonApiKey,
       period,
       triggeredBy: 'manual',
     });

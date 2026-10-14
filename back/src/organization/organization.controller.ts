@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { OrganizationService } from './organization.service';
+import { Throttle } from '@nestjs/throttler';
 import type { JwtPayload } from 'src/auth/interfaces/jwt.interface';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { ApiKeyGuard } from 'src/guards/api-key.guard';
@@ -63,7 +64,9 @@ export class OrganizationController {
   }
 
 
+  // каждый вызов — n8n + Dadata + OZON
   @Post('company-info')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   async companyInfo(@CurrentUser() user: JwtPayload, @Body() dto: CompanyInfoDto) {
@@ -80,6 +83,7 @@ export class OrganizationController {
   }
 
   @Post('classify')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   async classify(@CurrentUser() user: JwtPayload, @Body() dto: ClassifyDto) {

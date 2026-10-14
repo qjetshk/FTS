@@ -64,7 +64,8 @@ export class OrganizationService {
   private n8nToken(): string {
     return this.jwt.sign(
       { service: 'fts-back' },
-      { secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'), expiresIn: '1m' },
+      // свой секрет: раньше подписывали JWT_ACCESS_SECRET — n8n, зная его, мог выпустить токен любого юзера
+      { secret: this.config.getOrThrow<string>('N8N_WEBHOOK_SECRET'), expiresIn: '1m' },
     );
   }
 

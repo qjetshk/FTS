@@ -15,6 +15,7 @@ import { NOTIFICATION_CHANNEL, PLAN, PLAN_STATUS } from '@prisma/client';
 import { TelegramService } from 'src/telegram/telegram.service';
 import { escapeHtml } from 'src/telegram/telegram.format';
 import { USER_VIEW_SELECT, toUserView } from './user-view';
+import { hashToken } from './token-hash';
 
 export type TelegramIdentity = { chatId: bigint; username: string | null; name: string };
 
@@ -159,7 +160,7 @@ export class AuthService {
   async logout(userId: string, refreshToken: string, res: Response) {
     // Отзываем конкретный refresh токен
     await this.prisma.refreshToken.updateMany({
-      where: { userId, token: refreshToken, isRevoked: false },
+      where: { userId, token: hashToken(refreshToken), isRevoked: false },
       data: { isRevoked: true },
     });
 
@@ -189,9 +190,9 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + convertExpireTime(refreshExpire));
 
     await this.prisma.refreshToken.update({
-      where: { token: oldRefreshToken },
+      where: { token: hashToken(oldRefreshToken) },
       data: {
-        token: newRefreshToken,
+        token: hashToken(newRefreshToken),
         expiresAt,
         accessJti: jti,
         ...(userAgent && { userAgent }),
@@ -270,11 +271,11 @@ export class AuthService {
     if (existing) {
       await this.prisma.refreshToken.update({
         where: { id: existing.id },
-        data: { token: refreshToken, expiresAt, isRevoked: false, accessJti: jti },
+        data: { token: hashToken(refreshToken), expiresAt, isRevoked: false, accessJti: jti },
       });
     } else {
       await this.prisma.refreshToken.create({
-        data: { token: refreshToken, userId, expiresAt, userAgent, ipAddress, accessJti: jti },
+        data: { token: hashToken(refreshToken), userId, expiresAt, userAgent, ipAddress, accessJti: jti },
       });
     }
 
@@ -346,7 +347,7 @@ export class AuthService {
       createdAt: t.createdAt,
       expiresAt: t.expiresAt,
       deviceName: this.parseDevice(t.userAgent ?? undefined),
-      isCurrent: t.token === currentToken,
+      isCurrent: t.token === hashToken(currentToken),
     }));
   }
 
@@ -356,13 +357,13 @@ export class AuthService {
     const ttl = Math.ceil(convertExpireTime(accessExpire) / 1000);
 
     const others = await this.prisma.refreshToken.findMany({
-      where: { userId, token: { not: currentToken }, isRevoked: false },
+      where: { userId, token: { not: hashToken(currentToken) }, isRevoked: false },
       select: { accessJti: true },
     });
 
     // Помечаем в БД как отозванные
     await this.prisma.refreshToken.updateMany({
-      where: { userId, token: { not: currentToken }, isRevoked: false },
+      where: { userId, token: { not: hashToken(currentToken) }, isRevoked: false },
       data: { isRevoked: true },
     });
 

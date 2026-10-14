@@ -14,10 +14,10 @@ export type EmailJobData<T extends EmailJobName> = EmailJobMap[T];
 
 // ─── Statform / Classify ──────────────────────────────────────────────────────
 
+// без API-ключа: данные задач видны в Bull Board и лежат в Redis неделю — ключ читаем из БД в обработчике
 export interface StatformJobData {
   organizationId: string;
   ozonClientId: number;
-  ozonApiKey: string;
   period: string; // 'YYYY-MM'
   triggeredBy: 'cron' | 'manual';
 }
@@ -25,5 +25,4 @@ export interface StatformJobData {
 export interface ClassifyJobData {
   organizationId: string;
   ozonClientId: number;
-  ozonApiKey: string;
 }

@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { RequestCodeDto } from './dto/request-code.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
@@ -35,7 +36,9 @@ export class AuthController {
     return this.authService.requestCode(dto, req.ip);
   }
 
+  // перебор кодов по многим почтам с одного IP
   @Post('email/verify-code')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   async verifyCode(
     @Body() dto: VerifyCodeDto,
@@ -73,6 +76,7 @@ export class AuthController {
   }
 
   @Post('email/link/verify-code')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   async verifyEmailLink(@CurrentUser() user: JwtPayload, @Body() dto: VerifyCodeDto) {
