@@ -105,6 +105,11 @@ model Organization {
 
   // время завершения последнего прогона classify_TNVED (синк товаров из OZON)
   productsSyncedAt DateTime? @map("products_synced_at")
+  // синхронизация каталога + классификация ТН ВЭД (вебхук classify_TNVED): RUNNING — заодно блокировка от параллельных прогонов
+  productsSyncStatus    PRODUCTS_SYNC_STATUS? @map("products_sync_status")
+  productsSyncStartedAt DateTime?             @map("products_sync_started_at")
+  // код причины сбоя (ozon_auth | failed) — текст для юзера на фронте
+  productsSyncError     String?               @map("products_sync_error")
 
   // ✅ каскад при удалении юзера
   userId String @map("user_id")
@@ -302,4 +307,10 @@ enum NOTIFICATION_CHANNEL {
   EMAIL
   TELEGRAM
   BOTH
+}
+
+enum PRODUCTS_SYNC_STATUS {
+  RUNNING
+  DONE
+  FAILED
 }

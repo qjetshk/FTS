@@ -43,6 +43,8 @@ export type Organization = {
   userId: string
   declarant: Declarant | null
   productsSyncedAt: string | null
+  // синхронизация каталога + классификация ТН ВЭД; null — ни разу не запускалась
+  productsSyncStatus: ProductsSyncStatus | null
   createdAt: string
   updatedAt: string
 }
@@ -56,3 +58,7 @@ export type OrgListItem = {
   ogrn: string
   fullOpf: string
 }
+
+export type ProductsSyncStatus = "RUNNING" | "DONE" | "FAILED"
+
+export type OzonKeyCheck = { valid: true; expiresAt: string | null } | { valid: false; error: string }

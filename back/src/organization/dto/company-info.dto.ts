@@ -8,8 +8,4 @@ export class CompanyInfoDto {
   @IsString()
   @IsNotEmpty()
   clientId!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  userId!: string;
 }

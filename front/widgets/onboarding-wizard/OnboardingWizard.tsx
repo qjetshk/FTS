@@ -34,7 +34,11 @@ export function OnboardingWizard() {
     if (orgLoading || resumed.current) return
     resumed.current = true
     resume(existingOrg ?? null)
-    if (existingOrg?.declarant?.document) classify({ clientId: String(existingOrg.ozonClientId) })
+    // повторный заход на шаг 3 не перезапускает многочасовую классификацию: только если её ещё не было
+    // (идёт / упала — шаг 3 сам покажет прогресс или кнопку «Повторить»)
+    if (existingOrg?.declarant?.document && !existingOrg.productsSyncStatus) {
+      classify({ clientId: String(existingOrg.ozonClientId) })
+    }
   }, [orgLoading, existingOrg, resume, classify])
 
   if (orgLoading) {

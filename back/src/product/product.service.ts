@@ -128,6 +128,20 @@ export class ProductService {
     ]);
   }
 
+  // эндпоинты кабинета принимают clientId из запроса — без проверки любой юзер читал/менял товары чужой организации
+  async assertOwner(userId: string, clientId: number) {
+    const owned = await this.prisma.organization.count({ where: { ozonClientId: Number(clientId), userId } });
+    if (!owned) throw new NotFoundException('Организация не найдена');
+  }
+
+  // статус синхронизации каталога + классификации — шаг 3 онбординга показывает прогресс или причину сбоя
+  async getSyncStatus(clientId: number) {
+    return this.prisma.organization.findUniqueOrThrow({
+      where: { ozonClientId: Number(clientId) },
+      select: { productsSyncStatus: true, productsSyncError: true, productsSyncStartedAt: true, productsSyncedAt: true },
+    });
+  }
+
   async getProductsSnapshot(clientId: number) {
     const organization = await this.prisma.organization.findUniqueOrThrow({
       where: { ozonClientId: Number(clientId) },

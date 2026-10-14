@@ -1,5 +1,5 @@
 import { baseApi } from "@/shared/api"
-import type { GetProductsResponse, ProductSnapshot, TnvedStatus } from "../model/product.type"
+import type { GetProductsResponse, ProductSnapshot, ProductsSyncState, TnvedStatus } from "../model/product.type"
 
 const productApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
@@ -10,6 +10,10 @@ const productApi = baseApi.injectEndpoints({
     }),
     getProductsSnapshot: build.query<ProductSnapshot[], number>({
       query: (clientId) => `/products/snapshot-user/${clientId}`,
+      providesTags: ["Product"],
+    }),
+    getProductsSyncStatus: build.query<ProductsSyncState, number>({
+      query: (clientId) => `/products/sync-status/${clientId}`,
     }),
     updateTnved: build.mutation<void, {
       productId: number
@@ -37,6 +41,7 @@ const productApi = baseApi.injectEndpoints({
 export const {
   useGetProductsQuery,
   useGetProductsSnapshotQuery,
+  useGetProductsSyncStatusQuery,
   useUpdateTnvedMutation,
   useVerifyAllTnvedMutation,
   useUpdateCountryMutation,

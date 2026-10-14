@@ -64,50 +64,59 @@ export class OrganizationController {
   @Post('company-info')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async companyInfo(@Body() dto: CompanyInfoDto) {
-    return this.organizationService.companyInfo(dto.apiKey, dto.clientId, dto.userId);
+  async companyInfo(@CurrentUser() user: JwtPayload, @Body() dto: CompanyInfoDto) {
+    // userId — только из токена: из тела можно было создать оргу на чужой аккаунт
+    return this.organizationService.companyInfo(dto.apiKey, dto.clientId, user.id);
+  }
+
+  // шаг 1: проверить пару Client ID + ключ в OZON до создания организации
+  @Post('check-api-key')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async checkApiKey(@CurrentUser() user: JwtPayload, @Body() dto: CompanyInfoDto) {
+    return this.organizationService.checkApiKey(user.id, dto.clientId, dto.apiKey);
   }
 
   @Post('classify')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async classify(@Body() dto: ClassifyDto) {
-    this.organizationService.classify(dto.clientId);
-    return { message: 'Классификация запущена' };
+  async classify(@CurrentUser() user: JwtPayload, @Body() dto: ClassifyDto) {
+    // started: false — по этой орге уже идёт прогон, второй не запускаем
+    return this.organizationService.classify(user.id, dto.clientId);
   }
 
   @Put('update')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async updateOrganization(@Body() dto: UpdateOrganizationDto) {
-    return this.organizationService.updateOrganization(dto);
+  async updateOrganization(@CurrentUser() user: JwtPayload, @Body() dto: UpdateOrganizationDto) {
+    return this.organizationService.updateOrganization(user.id, dto);
   }
 
   @Get('declarant/:id')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async getDeclarantById(@Param('id') id: string) {
-    return this.organizationService.getDeclarantById(id);
+  async getDeclarantById(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.organizationService.getDeclarantById(id, user.id);
   }
 
   @Put('declarant/update')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async updateDeclarant(@Body() dto: UpdateDeclarantDto) {
-    return this.organizationService.updateDeclarant(dto);
+  async updateDeclarant(@CurrentUser() user: JwtPayload, @Body() dto: UpdateDeclarantDto) {
+    return this.organizationService.updateDeclarant(user.id, dto);
   }
 
   @Get('validate-api-key')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async validateApiKey(@CurrentUser() user: JwtPayload) {
-    return this.organizationService.validateApiKey(user.id);
+  async validateApiKey(@CurrentUser() user: JwtPayload, @Query('orgId') orgId?: string) {
+    return this.organizationService.validateApiKey(user.id, orgId);
   }
 
   @Post('declarant/document/create')
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(JwtAuthGuard)
-  async createDocument(@Body() dto: CreateDocumentDto) {
-    return this.organizationService.createDocument(dto);
+  async createDocument(@CurrentUser() user: JwtPayload, @Body() dto: CreateDocumentDto) {
+    return this.organizationService.createDocument(user.id, dto);
   }
 }

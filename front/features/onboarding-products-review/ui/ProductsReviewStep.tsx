@@ -1,18 +1,25 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useDispatch } from "react-redux"
 import { toast } from "sonner"
 import { Button } from "@/shared/ui"
+import { baseApi } from "@/shared/api"
 import {
   useGetProductsSnapshotQuery,
+  useGetProductsSyncStatusQuery,
   useUpdateTnvedMutation,
   useVerifyAllTnvedMutation,
   useUpdateCountryMutation,
   isNeedsAttention,
   type PendingTnved,
 } from "@/entities/product"
+import { useClassifyMutation } from "@/entities/organization"
 import { useCompleteOnboardingMutation } from "@/entities/user"
 import { ProductsTable } from "@/widgets/products-table"
+import { SyncStatusBanner } from "./SyncStatusBanner"
+
+const POLL_MS = 5000
 
 type Props = {
   clientId: number
@@ -24,10 +31,22 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
   const [pendingCountry, setPendingCountry] = useState<Record<number, string>>({})
   const [isSaving, setIsSaving] = useState(false)
 
+  const { data: sync, refetch: refetchSync } = useGetProductsSyncStatusQuery(clientId, { skip: !clientId })
+  const syncing = sync?.productsSyncStatus === "RUNNING"
+  // опрос статуса — только пока синхронизация идёт (или статус ещё не пришёл); после DONE/FAILED — тишина
+  useGetProductsSyncStatusQuery(clientId, { skip: !clientId || (!!sync && !syncing), pollingInterval: POLL_MS })
+  const failed = sync?.productsSyncStatus === "FAILED"
   const { data: snapshot = [] } = useGetProductsSnapshotQuery(clientId, {
-    pollingInterval: 5000,
+    pollingInterval: syncing ? POLL_MS : 0,
     skip: !clientId,
   })
+  const [classify, { isLoading: retrying }] = useClassifyMutation()
+  const dispatch = useDispatch()
+
+  // синхронизация закончилась — последний опрос мог быть до финальных записей: перечитываем товары и счётчик
+  useEffect(() => {
+    if (sync && !syncing) dispatch(baseApi.util.invalidateTags(["Product"]))
+  }, [sync, syncing, dispatch])
   const [completeOnboarding, { isLoading: completing }] = useCompleteOnboardingMutation()
   const [updateTnved] = useUpdateTnvedMutation()
   const [verifyAllTnved] = useVerifyAllTnvedMutation()
@@ -43,7 +62,17 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
     return !tnvedOk || !countryOk
   }).length
 
-  const canProceed = total > 0 && classified === total && effectiveNeedsAttention === 0
+  // пустой каталог или сбой загрузки не запирают онбординг: товары догрузит ежедневная синхронизация
+  const canProceed = !syncing && (total === 0 || effectiveNeedsAttention === 0)
+
+  const retrySync = async () => {
+    try {
+      await classify({ clientId: String(clientId) }).unwrap()
+      refetchSync()
+    } catch {
+      toast.error("Не удалось запустить загрузку товаров")
+    }
+  }
 
   const handleTnvedSelect = (productId: number, code: string, name: string | null, unit: string | null) => {
     setPendingTnved(prev => ({ ...prev, [productId]: { tnvedCode: code, tnvedName: name, tnvedUnit: unit } }))
@@ -78,7 +107,7 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
         ),
       ])
       // Массово помечаем все остальные классифицированные товары как VERIFIED_BY_USER
-      await verifyAllTnved({ clientId }).unwrap()
+      if (total > 0) await verifyAllTnved({ clientId }).unwrap()
       await completeOnboarding()
       onComplete()
     } catch {
@@ -92,7 +121,9 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
 
   const buttonLabel = () => {
     if (isSaving || completing) return "Сохраняем..."
+    if (syncing) return "Дождитесь окончания загрузки товаров"
     if (!canProceed) return "Исправьте все ошибки чтобы продолжить"
+    if (total === 0) return "Продолжить без товаров"
     if (hasPending) return "Сохранить и перейти в дашборд"
     return "Всё проверено — перейти в дашборд"
   }
@@ -102,12 +133,15 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
 
       <div className="shrink-0 text-center">
         <h2 className="text-lg font-semibold">Классификация товаров</h2>
-        {classified < total && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center mt-1">
-            <span className="size-1.5 rounded-full bg-primary animate-pulse" />
-            Идёт классификация: {classified}/{total}
-          </div>
-        )}
+        {failed ? (
+          <SyncStatusBanner state="failed" error={sync?.productsSyncError ?? null} retrying={retrying} onRetry={retrySync} />
+        ) : syncing && total === 0 ? (
+          <SyncStatusBanner state="loading" />
+        ) : syncing || classified < total ? (
+          <SyncStatusBanner state="progress" classified={classified} total={total} />
+        ) : total === 0 && sync ? (
+          <SyncStatusBanner state="empty" />
+        ) : null}
         <div className="flex items-center justify-center gap-4 mt-2">
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-2.5 rounded-sm bg-red-400 shrink-0" />Нет страны или их конфликт /  ИИ сомневается в ТН ВЭД</span>
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-2.5 rounded-sm bg-yellow-300 shrink-0" />ИИ классифицировал сам, требует проверки</span>
@@ -119,6 +153,7 @@ export function ProductsReviewStep({ clientId, onComplete }: Props) {
         <ProductsTable
           clientId={clientId}
           showClassificationProgress
+          live={syncing}
           pendingTnvedMap={pendingTnved}
           onTnvedSelect={handleTnvedSelect}
           pendingCountryMap={pendingCountry}

@@ -16,6 +16,8 @@ import { UpdateTnvedDto } from './dto/update-tnved.dto';
 import { UpdateCountryDto } from './dto/update-country.dto';
 import { JwtAuthGuard } from 'src/guards/jwt.guard';
 import { GetProductsDto } from './dto/get-products.dto';
+import { CurrentUser } from 'src/decorators/current-user.decorator';
+import type { JwtPayload } from 'src/auth/interfaces/jwt.interface';
 
 @Controller('products')
 export class ProductController {
@@ -52,8 +54,16 @@ export class ProductController {
   @Get('snapshot-user/:clientId')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async getProductsSnapshotUser(@Param('clientId') clientId: number) {
+  async getProductsSnapshotUser(@Param('clientId') clientId: number, @CurrentUser() user: JwtPayload) {
+    await this.productService.assertOwner(user.id, clientId);
     return this.productService.getProductsSnapshot(clientId);
+  }
+
+  @Get('sync-status/:clientId')
+  @UseGuards(JwtAuthGuard)
+  async getSyncStatus(@Param('clientId') clientId: number, @CurrentUser() user: JwtPayload) {
+    await this.productService.assertOwner(user.id, clientId);
+    return this.productService.getSyncStatus(clientId);
   }
 
   @Post('add-tnved')
@@ -64,27 +74,31 @@ export class ProductController {
 
   @Post('update-tnved')
   @UseGuards(JwtAuthGuard)
-  async updateTnved(@Body() dto: UpdateTnvedDto) {
+  async updateTnved(@Body() dto: UpdateTnvedDto, @CurrentUser() user: JwtPayload) {
+    await this.productService.assertOwner(user.id, dto.clientId);
     return this.productService.updateTnved(dto);
   }
 
   @Post('verify-all')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async verifyAllTnved(@Body('clientId') clientId: number) {
+  async verifyAllTnved(@Body('clientId') clientId: number, @CurrentUser() user: JwtPayload) {
+    await this.productService.assertOwner(user.id, clientId);
     return this.productService.verifyAllTnved(Number(clientId));
   }
 
   @Post('update-country')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async updateCountry(@Body() dto: UpdateCountryDto) {
+  async updateCountry(@Body() dto: UpdateCountryDto, @CurrentUser() user: JwtPayload) {
+    await this.productService.assertOwner(user.id, dto.clientId);
     return this.productService.updateCountry(dto);
   }
 
   @Get('get-all')
   @UseGuards(JwtAuthGuard)
-  async getProducts(@Query() dto: GetProductsDto) {
+  async getProducts(@Query() dto: GetProductsDto, @CurrentUser() user: JwtPayload) {
+    await this.productService.assertOwner(user.id, dto.clientId);
     return this.productService.getProducts(dto);
   }
 }

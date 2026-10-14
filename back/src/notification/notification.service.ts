@@ -83,6 +83,14 @@ export class NotificationService {
     });
     if (!org) throw new NotFoundException(`Организация с clientId ${dto.clientId} не найдена`);
 
+    // OZON отклонил ключ во время синхронизации товаров → шаг 3 онбординга / «Товары» покажут причину
+    if (dto.event === 'ozon.api-error') {
+      await this.prisma.organization.updateMany({
+        where: { id: org.id, productsSyncStatus: 'RUNNING' },
+        data: { productsSyncStatus: 'FAILED', productsSyncError: 'ozon_auth' },
+      });
+    }
+
     const result = await this.notify(org.id, dto.event, payload as NotificationPayload<typeof dto.event>, dto.idempotencyKey);
     // deduplicated: true — такое событие уже отправлялось за последние сутки, новое письмо не создано
     return { queued: !result.deduplicated, ...result };

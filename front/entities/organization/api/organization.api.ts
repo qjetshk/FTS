@@ -1,5 +1,5 @@
 import { baseApi } from "@/shared/api"
-import type { Organization, OrgListItem } from "../model/organization.type"
+import type { Organization, OrgListItem, OzonKeyCheck } from "../model/organization.type"
 
 const organizationApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
@@ -15,8 +15,9 @@ const organizationApi = baseApi.injectEndpoints({
       query: () => "/organizations/get-first",
       providesTags: ["Organization"],
     }),
-    validateApiKey: build.query<{ valid: boolean; error?: string }, void>({
-      query: () => "/organizations/validate-api-key",
+    // orgId — проверяем ключ именно этой организации, а не первой
+    validateApiKey: build.query<{ valid: boolean; error?: string }, string>({
+      query: (orgId) => ({ url: "/organizations/validate-api-key", params: { orgId } }),
     }),
     updateOrganization: build.mutation<{ message: string }, {
       id: string
@@ -57,10 +58,16 @@ const organizationApi = baseApi.injectEndpoints({
       query: (body) => ({ url: "/organizations/declarant/document/create", method: "POST", body }),
       invalidatesTags: ["Organization"],
     }),
-    companyInfo: build.mutation<Organization, { apiKey: string; clientId: string; userId: string }>({
+    // живая проверка пары Client ID + ключ в OZON (шаг 1), до создания организации
+    checkApiKey: build.mutation<OzonKeyCheck, { apiKey: string; clientId: string }>({
+      query: (body) => ({ url: "/organizations/check-api-key", method: "POST", body }),
+    }),
+    // userId бэк берёт из токена
+    companyInfo: build.mutation<Organization, { apiKey: string; clientId: string }>({
       query: (body) => ({ url: "/organizations/company-info", method: "POST", body }),
     }),
-    classify: build.mutation<{ message: string }, { clientId: string }>({
+    // started: false — синхронизация этой организации уже идёт
+    classify: build.mutation<{ started: boolean }, { clientId: string }>({
       query: (body) => ({ url: "/organizations/classify", method: "POST", body }),
     }),
   }),
@@ -71,6 +78,7 @@ export const {
   useGetOrgByIdQuery,
   useGetFirstOrgQuery,
   useValidateApiKeyQuery,
+  useCheckApiKeyMutation,
   useUpdateOrganizationMutation,
   useUpdateDeclarantMutation,
   useCreateDocumentMutation,

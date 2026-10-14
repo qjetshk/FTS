@@ -54,3 +54,13 @@ export type PendingTnved = {
   tnvedName: string | null
   tnvedUnit: string | null
 }
+
+// ozon_auth — OZON отклонил API-ключ; failed — прочий сбой синхронизации
+export type ProductsSyncError = "ozon_auth" | "failed"
+
+export type ProductsSyncState = {
+  productsSyncStatus: "RUNNING" | "DONE" | "FAILED" | null
+  productsSyncError: ProductsSyncError | null
+  productsSyncStartedAt: string | null
+  productsSyncedAt: string | null
+}

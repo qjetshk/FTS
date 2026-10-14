@@ -55,6 +55,9 @@ Table organizations {
   postalCode String [not null]
   orgLang String [not null, default: 'RU']
   productsSyncedAt DateTime
+  productsSyncStatus PRODUCTS_SYNC_STATUS
+  productsSyncStartedAt DateTime
+  productsSyncError String
   userId String [not null]
   user users [not null]
   products products [not null]
@@ -222,6 +225,12 @@ Enum NOTIFICATION_CHANNEL {
   EMAIL
   TELEGRAM
   BOTH
+}
+
+Enum PRODUCTS_SYNC_STATUS {
+  RUNNING
+  DONE
+  FAILED
 }
 
 Ref: refresh_tokens.userId > users.id [delete: Cascade]

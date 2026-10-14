@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
@@ -18,11 +18,13 @@ import {
   useClassifyMutation,
   type Organization,
 } from "@/entities/organization";
-import { useMeQuery } from "@/entities/user";
+import { getApiErrorMessage } from "@/shared/lib";
 import {
   apiKeysSchema,
   type ApiKeysFormValues,
 } from "../model/api-keys.schema";
+import { useKeyCheck } from "../lib/use-key-check.lib";
+import { KeyCheckStatus } from "./KeyCheckStatus";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 
@@ -31,7 +33,6 @@ type Props = {
 };
 
 export function ApiKeysStep({ onComplete }: Props) {
-  const { data: user } = useMeQuery();
   const [companyInfo, { isLoading }] = useCompanyInfoMutation();
   const [classify] = useClassifyMutation();
 
@@ -40,23 +41,23 @@ export function ApiKeysStep({ onComplete }: Props) {
     defaultValues: { apiKey: "", clientId: "" },
   });
 
+  const apiKey = useWatch({ control: form.control, name: "apiKey" });
+  const clientId = useWatch({ control: form.control, name: "clientId" });
+  const keyState = useKeyCheck(apiKey, clientId);
+
   const onSubmit = async (values: ApiKeysFormValues) => {
-    if (!user) {
-      toast.error("Пользователь не найден, войдите заново");
-      return;
-    }
     try {
       const orgData = await companyInfo({
         apiKey: values.apiKey,
         clientId: values.clientId,
-        userId: user.id,
       }).unwrap();
 
       classify({ clientId: values.clientId });
 
       onComplete(orgData, values.apiKey, values.clientId);
-    } catch {
-      toast.error("Не удалось получить данные организации. Проверьте ключи.");
+    } catch (e) {
+      // 409 — магазин уже подключён к другому аккаунту: показываем текст бэка
+      toast.error(getApiErrorMessage(e, "Не удалось получить данные организации. Проверьте ключи."));
     }
   };
 
@@ -88,14 +89,21 @@ export function ApiKeysStep({ onComplete }: Props) {
             name="apiKey"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>API Key</FormLabel>
+                <div className="flex items-center justify-between gap-2">
+                  <FormLabel>API Key</FormLabel>
+                  <KeyCheckStatus state={keyState} />
+                </div>
                 <FormControl>
                   <Input
                     placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                    aria-invalid={keyState.status === "error" || undefined}
                     {...field}
                   />
                 </FormControl>
                 <FormMessage />
+                {keyState.status === "error" && (
+                  <p className="text-xs text-destructive">{keyState.error}</p>
+                )}
               </FormItem>
             )}
           />
@@ -112,7 +120,8 @@ export function ApiKeysStep({ onComplete }: Props) {
               </FormItem>
             )}
           />
-          <Button type="submit" className="mt-2 w-full" disabled={isLoading}>
+          {/* «Далее» — только с проверенным ключом: с нерабочим n8n не получит данные организации */}
+          <Button type="submit" className="mt-2 w-full" disabled={isLoading || keyState.status !== "valid"}>
             {isLoading ? "Получаем данные..." : "Далее"}
           </Button>
         </form>

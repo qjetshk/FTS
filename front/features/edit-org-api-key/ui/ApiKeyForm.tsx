@@ -28,7 +28,7 @@ export function ApiKeyForm({ orgId, currentApiKey, clientId, userId }: Props) {
     isLoading: validating,
     isFetching: revalidating,
     refetch,
-  } = useValidateApiKeyQuery(undefined, { refetchOnMountOrArgChange: true })
+  } = useValidateApiKeyQuery(orgId, { refetchOnMountOrArgChange: true })
 
   const form = useForm<ApiKeyValues>({
     resolver: zodResolver(apiKeySchema),

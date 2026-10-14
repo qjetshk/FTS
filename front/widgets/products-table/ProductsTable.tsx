@@ -13,6 +13,8 @@ type Props = {
   clientId: number
   className?: string
   showClassificationProgress?: boolean
+  // идёт синхронизация каталога — перезапрашиваем товары, иначе новые не появятся до перезагрузки страницы
+  live?: boolean
   pendingTnvedMap?: Record<number, PendingTnved>
   onTnvedSelect?: (productId: number, code: string, name: string | null, unit: string | null) => void
   pendingCountryMap?: Record<number, string>
@@ -22,15 +24,17 @@ type Props = {
 const EMPTY_PENDING_TNVED: Record<number, PendingTnved> = {}
 const EMPTY_PENDING_COUNTRY: Record<number, string> = {}
 const NOOP = () => {}
+const LIVE_POLL_MS = 5000
 
-export function ProductsTable({ clientId, className, showClassificationProgress = false, pendingTnvedMap = EMPTY_PENDING_TNVED, onTnvedSelect = NOOP, pendingCountryMap = EMPTY_PENDING_COUNTRY, onCountrySelect = NOOP }: Props) {
+export function ProductsTable({ clientId, className, showClassificationProgress = false, live = false, pendingTnvedMap = EMPTY_PENDING_TNVED, onTnvedSelect = NOOP, pendingCountryMap = EMPTY_PENDING_COUNTRY, onCountrySelect = NOOP }: Props) {
   const [mainPage, setMainPage] = useState(1)
   // shared between both blocks so their columns stay aligned
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({})
 
-  const { data, isLoading } = useGetProductsQuery({ clientId, page: 1, limit: 100 })
+  const pollingInterval = live ? LIVE_POLL_MS : 0
+  const { data, isLoading } = useGetProductsQuery({ clientId, page: 1, limit: 100 }, { pollingInterval })
   const { data: snapshot = [] } = useGetProductsSnapshotQuery(clientId, {
-    pollingInterval: showClassificationProgress ? 5000 : 0,
+    pollingInterval,
     skip: !clientId || !showClassificationProgress,
   })
 
