@@ -170,25 +170,12 @@ export class OrganizationService {
     return organization;
   }
 
-  async getOrganization(id: string, clientId: string) {
-    const ozonClientId = Number(clientId)
-    const organization = await this.prisma.organization.findFirst({
-      where: {
-        OR: [{ id }, { ozonClientId }],
-      },
-      include: {
-        declarant: {
-          include: {
-            document: true,
-          },
-        },
-      },
-    });
-
-    if (!organization) {
-      throw new NotFoundException('Организация не найдена');
-    }
-
+  async getOrganizationId(id: string, clientId: string) {
+    // без обоих параметров Prisma проигнорировала бы undefined и вернула первую попавшуюся оргу
+    const where = id ? { id } : /^\d+$/.test(clientId ?? '') ? { ozonClientId: Number(clientId) } : null;
+    if (!where) throw new NotFoundException('Организация не найдена');
+    const organization = await this.prisma.organization.findFirst({ where, select: { id: true } });
+    if (!organization) throw new NotFoundException('Организация не найдена');
     return organization;
   }
 

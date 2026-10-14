@@ -54,10 +54,12 @@ export class OrganizationController {
     return this.organizationService.getFirstOrganization(user.id);
   }
 
+  // n8n (нода «Get OrgId» в FTS) — без авторизации, поэтому отдаём только id.
+  // Раньше возвращалась вся орга: API-ключ OZON и паспорт декларанта по одному Client ID
   @Get('get')
   @HttpCode(HttpStatus.OK)
-  async getOrganization(@Query('id') id: string, @Query('clientId') clientId: string,) {
-    return this.organizationService.getOrganization(id, clientId);
+  async getOrganization(@Query('id') id: string, @Query('clientId') clientId: string) {
+    return this.organizationService.getOrganizationId(id, clientId);
   }
 
 

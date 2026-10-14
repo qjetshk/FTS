@@ -20,7 +20,13 @@ export class EmailProducerService {
 
   // код живёт 10 мин — долгие ретраи бессмысленны, поэтому свои attempts
   async sendLoginCode(to: string, code: string) {
-    await this.enqueue('login-code', { to, code }, { attempts: 3, backoff: { type: 'fixed', delay: 5_000 } });
+    // код в данных задачи — не храним его в Redis дольше, чем нужно для отправки
+    await this.enqueue('login-code', { to, code }, {
+      attempts: 3,
+      backoff: { type: 'fixed', delay: 5_000 },
+      removeOnComplete: true,
+      removeOnFail: { age: 60 * 60 },
+    });
   }
 
   // имя задачи = имя события = шаблон в email-worker

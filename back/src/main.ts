@@ -9,6 +9,21 @@ import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { Queue } from 'bullmq';
+import { timingSafeEqual } from 'crypto';
+import type { NextFunction, Request, Response } from 'express';
+
+const safeEqual = (a: string, b: string) =>
+  a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+
+function basicAuth(user: string, password: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const [scheme, encoded] = (req.headers.authorization ?? '').split(' ');
+    const [u, p] = Buffer.from(encoded ?? '', 'base64').toString().split(':');
+    if (scheme === 'Basic' && safeEqual(u ?? '', user) && safeEqual(p ?? '', password)) return next();
+    res.setHeader('WWW-Authenticate', 'Basic realm="bull-board"');
+    res.status(401).send('Unauthorized');
+  };
+}
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -19,24 +34,29 @@ async function bootstrap() {
 
   const config = app.get(ConfigService);
 
-  // Bull Board
-  const redisConnection = {
-    host: config.getOrThrow<string>('REDIS_HOST'),
-    port: config.get<number>('REDIS_PORT', 6379),
-    maxRetriesPerRequest: null as null,
-    enableReadyCheck: false,
-  };
-  const serverAdapter = new ExpressAdapter();
-  serverAdapter.setBasePath('/bull-board');
-  createBullBoard({
-    queues: [
-      new BullMQAdapter(new Queue('statform-generation', { connection: redisConnection })),
-      new BullMQAdapter(new Queue('product-classification', { connection: redisConnection })),
-      new BullMQAdapter(new Queue('email', { connection: redisConnection })),
-    ],
-    serverAdapter,
-  });
-  app.use('/bull-board', serverAdapter.getRouter());
+  // Bull Board — в задачах лежат коды входа из писем и API-ключи OZON: только под basic auth.
+  // Без BULL_BOARD_USER/BULL_BOARD_PASSWORD панель не поднимается вовсе (раньше была открыта всем, в т.ч. через ngrok)
+  const boardUser = config.get<string>('BULL_BOARD_USER');
+  const boardPassword = config.get<string>('BULL_BOARD_PASSWORD');
+  if (boardUser && boardPassword) {
+    const redisConnection = {
+      host: config.getOrThrow<string>('REDIS_HOST'),
+      port: config.get<number>('REDIS_PORT', 6379),
+      maxRetriesPerRequest: null as null,
+      enableReadyCheck: false,
+    };
+    const serverAdapter = new ExpressAdapter();
+    serverAdapter.setBasePath('/bull-board');
+    createBullBoard({
+      queues: [
+        new BullMQAdapter(new Queue('statform-generation', { connection: redisConnection })),
+        new BullMQAdapter(new Queue('product-classification', { connection: redisConnection })),
+        new BullMQAdapter(new Queue('email', { connection: redisConnection })),
+      ],
+      serverAdapter,
+    });
+    app.use('/bull-board', basicAuth(boardUser, boardPassword), serverAdapter.getRouter());
+  }
 
   app.use(cookieParser());
 
