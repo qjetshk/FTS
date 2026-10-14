@@ -27,6 +27,9 @@ model User {
   telegramChatId   BigInt? @unique @map("telegram_chat_id")
   telegramUsername String? @map("telegram_username")
 
+  // куда слать уведомления; все события идут в выбранный канал, выключить совсем нельзя
+  notificationChannel NOTIFICATION_CHANNEL @default(BOTH) @map("notification_channel")
+
   // Подписка
   plan           PLAN        @default(TRIAL)
   planExpiresAt  DateTime?   @map("plan_expires_at")
@@ -293,4 +296,10 @@ model TnvedLc {
   unit String?
 
   @@map("tnved_lc")
+}
+
+enum NOTIFICATION_CHANNEL {
+  EMAIL
+  TELEGRAM
+  BOTH
 }

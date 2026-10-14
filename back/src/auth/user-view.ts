@@ -13,6 +13,7 @@ export const USER_VIEW_SELECT = {
   isOnboardingComplete: true,
   telegramChatId: true,
   telegramUsername: true,
+  notificationChannel: true,
 } satisfies Prisma.UserSelect;
 
 type UserViewRow = Prisma.UserGetPayload<{ select: typeof USER_VIEW_SELECT }>;

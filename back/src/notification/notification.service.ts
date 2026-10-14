@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { createHash } from 'crypto';
 import { plainToInstance, type ClassConstructor } from 'class-transformer';
 import { validate, type ValidationError } from 'class-validator';
+import type { NOTIFICATION_CHANNEL } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { EmailProducerService, type EnqueueResult } from 'src/email-producer/email-producer.service';
 import { TelegramService } from 'src/telegram/telegram.service';
@@ -32,6 +33,19 @@ function contentHash(value: unknown): string {
     return v;
   };
   return createHash('sha1').update(JSON.stringify(normalize(value))).digest('hex').slice(0, 12);
+}
+
+// Канал выбирает юзер, но выключить уведомления совсем нельзя: выбранный канал недоступен
+// (Telegram отвязан/бот заблокирован, почты нет) → шлём в тот, что есть
+function deliveryTargets(user: { email: string | null; telegramChatId: bigint | null; notificationChannel: NOTIFICATION_CHANNEL }) {
+  const wantEmail = user.notificationChannel !== 'TELEGRAM';
+  const wantTelegram = user.notificationChannel !== 'EMAIL';
+  const canEmail = !!user.email;
+  const canTelegram = !!user.telegramChatId;
+  return {
+    email: canEmail && (wantEmail || !canTelegram) ? user.email : null,
+    chatId: canTelegram && (wantTelegram || !canEmail) ? user.telegramChatId : null,
+  };
 }
 
 // 'payload.products.0.name: name must be a string' — ошибки вложенных объектов лежат в children
@@ -86,7 +100,7 @@ export class NotificationService {
       select: {
         fullOrg: true,
         ozonClientId: true,
-        user: { select: { email: true, name: true, telegramChatId: true } },
+        user: { select: { email: true, name: true, telegramChatId: true, notificationChannel: true } },
       },
     });
     if (!org) {
@@ -107,7 +121,8 @@ export class NotificationService {
       return { deduplicated: true };
     }
 
-    const { email, name, telegramChatId: chatId } = org.user;
+    const { name } = org.user;
+    const { email, chatId } = deliveryTargets(org.user);
     const result: EnqueueResult = email
       ? await this.emailProducer.sendNotification(
           event,
@@ -116,7 +131,7 @@ export class NotificationService {
         )
       : { deduplicated: false };
 
-    // Telegram — доп. канал (или единственный у юзера без почты); ошибки не ломают основной поток
+    // ошибки Telegram не ломают основной поток
     if (chatId) {
       this.sendTelegram(chatId, event, payload, { orgName: org.fullOrg, actionUrl }).catch((e) =>
         this.logger.error(`Telegram ${event} to chat ${chatId} failed: ${(e as Error).message}`),

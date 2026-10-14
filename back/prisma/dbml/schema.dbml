@@ -11,6 +11,7 @@ Table users {
   isOnboardingComplete Boolean [not null, default: false]
   telegramChatId BigInt [unique]
   telegramUsername String
+  notificationChannel NOTIFICATION_CHANNEL [not null, default: 'BOTH']
   plan PLAN [not null, default: 'TRIAL']
   planExpiresAt DateTime
   planStatus PLAN_STATUS [not null, default: 'ACTIVE']
@@ -215,6 +216,12 @@ Enum TNVED_STATUS {
   NEEDS_REVIEW
   VERIFIED_BY_USER
   VERIFIED_BY_LLM
+}
+
+Enum NOTIFICATION_CHANNEL {
+  EMAIL
+  TELEGRAM
+  BOTH
 }
 
 Ref: refresh_tokens.userId > users.id [delete: Cascade]

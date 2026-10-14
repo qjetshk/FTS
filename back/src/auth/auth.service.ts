@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
@@ -11,7 +11,7 @@ import { RequestCodeDto } from './dto/request-code.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
 import { JwtPayload, StringValue } from './interfaces/jwt.interface';
 import { convertExpireTime } from 'src/utils/convert-expire-time.util';
-import { PLAN, PLAN_STATUS } from '@prisma/client';
+import { NOTIFICATION_CHANNEL, PLAN, PLAN_STATUS } from '@prisma/client';
 import { TelegramService } from 'src/telegram/telegram.service';
 import { escapeHtml } from 'src/telegram/telegram.format';
 import { USER_VIEW_SELECT, toUserView } from './user-view';
@@ -96,6 +96,25 @@ export class AuthService {
       select: USER_VIEW_SELECT,
     });
     return toUserView(user);
+  }
+
+  // ─── Канал уведомлений ─────────────────────────────────────────────────────
+
+  async updateNotificationChannel(userId: string, channel: NOTIFICATION_CHANNEL) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, telegramChatId: true },
+    });
+    if (!user) throw new UnauthorizedException('Пользователь не найден');
+    if (channel !== 'EMAIL' && !user.telegramChatId) throw new BadRequestException('Сначала привяжите Telegram');
+    if (channel !== 'TELEGRAM' && !user.email) throw new BadRequestException('Сначала привяжите почту');
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { notificationChannel: channel },
+      select: USER_VIEW_SELECT,
+    });
+    return toUserView(updated);
   }
 
   // без автослияния аккаунтов: занятая почта = другой аккаунт, юзер решает сам

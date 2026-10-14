@@ -1,5 +1,6 @@
 export type UserPlan = "TRIAL" | "BASIC" | "PRO"
 export type UserPlanStatus = "ACTIVE" | "EXPIRED" | "CANCELLED"
+export type NotificationChannel = "EMAIL" | "TELEGRAM" | "BOTH"
 
 export type User = {
   id: string
@@ -16,6 +17,8 @@ export type User = {
   // Telegram привязан — уведомления дублируются в бота
   telegramLinked: boolean
   telegramUsername: string | null
+  // куда идут уведомления; если выбранный канал недоступен — бэк шлёт в другой
+  notificationChannel: NotificationChannel
 }
 
 export type AuthResponse = {

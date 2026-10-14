@@ -10,6 +10,6 @@ export const ROUTES = {
   addOrg: "/dashboard/organizations/new",
   account: "/dashboard/account",
   billing: "/dashboard/account#billing",
-  notifications: "/dashboard/notifications",
+  notifications: "/dashboard/account#notifications",
   settings: "/dashboard/settings"
 } as const

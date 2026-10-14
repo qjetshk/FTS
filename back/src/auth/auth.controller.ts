@@ -16,6 +16,7 @@ import { RequestCodeDto } from './dto/request-code.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { TelegramPollDto } from './dto/telegram-poll.dto';
+import { UpdateNotificationsDto } from './dto/update-notifications.dto';
 import { TelegramLoginService } from './telegram-login.service';
 import type { JwtPayload } from './interfaces/jwt.interface';
 import { JwtAuthGuard, JwtRefreshGuard } from 'src/guards/jwt.guard';
@@ -118,6 +119,14 @@ export class AuthController {
     @Body() dto: UpdateProfileDto,
   ) {
     return this.authService.updateProfile(user.id, dto);
+  }
+
+  // куда слать уведомления: почта, Telegram или оба
+  @Patch('notifications')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async updateNotifications(@CurrentUser() user: JwtPayload, @Body() dto: UpdateNotificationsDto) {
+    return this.authService.updateNotificationChannel(user.id, dto.channel);
   }
 
   @Post('complete-onboarding')

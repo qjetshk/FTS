@@ -132,7 +132,7 @@ export default function AccountPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card id="notifications">
           <CardHeader>
             <CardTitle className="text-base">Уведомления</CardTitle>
           </CardHeader>

@@ -1,4 +1,4 @@
-export type { User, AuthResponse, UserPlan, UserPlanStatus } from "./model/user.type"
+export type { User, AuthResponse, UserPlan, UserPlanStatus, NotificationChannel } from "./model/user.type"
 export {
   emailSchema,
   codeSchema,
@@ -23,6 +23,7 @@ export {
   useTelegramLoginPollMutation,
   useRequestEmailLinkCodeMutation,
   useVerifyEmailLinkMutation,
+  useUpdateNotificationChannelMutation,
   type Session,
   type TelegramLoginPoll,
   type TelegramLink,

@@ -1,5 +1,5 @@
 import { baseApi } from "@/shared/api"
-import type { AuthResponse, User } from "../model/user.type"
+import type { AuthResponse, NotificationChannel, User } from "../model/user.type"
 import type { ProfileNameValues } from "../model/profile-name.schema"
 
 type RequestCodeBody = { email: string }
@@ -61,6 +61,10 @@ const authApi = baseApi.injectEndpoints({
       query: (body) => ({ url: "/auth/email/link/verify-code", method: "POST", body }),
       invalidatesTags: ["User"],
     }),
+    updateNotificationChannel: build.mutation<User, { channel: NotificationChannel }>({
+      query: (body) => ({ url: "/auth/notifications", method: "PATCH", body }),
+      invalidatesTags: ["User"],
+    }),
     createTelegramLink: build.mutation<TelegramLink, void>({
       query: () => ({ url: "/telegram/link", method: "POST" }),
     }),
@@ -92,4 +96,5 @@ export const {
   useTelegramLoginPollMutation,
   useRequestEmailLinkCodeMutation,
   useVerifyEmailLinkMutation,
+  useUpdateNotificationChannelMutation,
 } = authApi

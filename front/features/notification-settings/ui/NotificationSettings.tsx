@@ -1,76 +1,75 @@
 "use client"
 
-import { useState } from "react"
+import { toast } from "sonner"
+import { Button } from "@/shared/ui"
+import { getApiErrorMessage } from "@/shared/lib"
+import { useMeQuery, useUpdateNotificationChannelMutation, type NotificationChannel } from "@/entities/user"
 
-type Toggle = { id: string; label: string; description: string; disabled?: boolean }
+type Option = { value: NotificationChannel; label: string; needsEmail: boolean; needsTelegram: boolean }
 
-const TOGGLES: Toggle[] = [
-  {
-    id: "classification_done",
-    label: "Классификация завершена",
-    description: "Email когда все товары организации получили ТН ВЭД код",
-  },
-  {
-    id: "statform_ready",
-    label: "Статформа готова",
-    description: "Email когда XML-файл статформы сформирован и готов к скачиванию",
-  },
-  {
-    id: "push",
-    label: "Push-уведомления",
-    description: "Браузерные уведомления — скоро",
-    disabled: true,
-  },
+const OPTIONS: Option[] = [
+  { value: "EMAIL", label: "Почта", needsEmail: true, needsTelegram: false },
+  { value: "TELEGRAM", label: "Telegram", needsEmail: false, needsTelegram: true },
+  { value: "BOTH", label: "Оба", needsEmail: true, needsTelegram: true },
 ]
 
+// Только выбор канала: все события идут туда, выключить уведомления совсем нельзя
 export function NotificationSettings() {
-  const [values, setValues] = useState<Record<string, boolean>>({
-    classification_done: true,
-    statform_ready: true,
-    push: false,
-  })
+  const { data: user } = useMeQuery()
+  const [update, { isLoading }] = useUpdateNotificationChannelMutation()
 
-  const toggle = (id: string) => {
-    setValues((prev) => ({ ...prev, [id]: !prev[id] }))
-    // TODO: persist to backend when notification preferences endpoint is ready
+  if (!user) return null
+  const hasEmail = !!user.email
+  const hasTelegram = user.telegramLinked
+
+  // выбранный канал недоступен (Telegram отвязан, почты нет) → бэк шлёт в оставшийся, показываем его
+  const effective: NotificationChannel =
+    !hasTelegram ? "EMAIL" : !hasEmail ? "TELEGRAM" : user.notificationChannel
+
+  const select = async (channel: NotificationChannel) => {
+    if (channel === effective) return
+    try {
+      await update({ channel }).unwrap()
+    } catch (e) {
+      toast.error(getApiErrorMessage(e, "Не удалось сохранить"))
+    }
   }
 
   return (
     <div className="flex flex-col gap-3">
-      {TOGGLES.map((t) => (
-        <div key={t.id} className="flex items-center justify-between gap-4 py-1">
-          <div className="flex flex-col gap-0.5">
-            <span className={`text-sm font-medium ${t.disabled ? "text-muted-foreground" : ""}`}>
-              {t.label}
-            </span>
-            <span className="text-xs text-muted-foreground">{t.description}</span>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={values[t.id]}
-            aria-label={t.label}
-            disabled={t.disabled}
-            onClick={() => !t.disabled && toggle(t.id)}
-            className={[
-              "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              "disabled:cursor-not-allowed disabled:opacity-40",
-              values[t.id] ? "bg-primary" : "bg-input",
-            ].join(" ")}
-          >
-            <span
-              className={[
-                "pointer-events-none block size-4 rounded-full bg-background shadow-lg ring-0 transition-transform duration-200",
-                values[t.id] ? "translate-x-4" : "translate-x-0",
-              ].join(" ")}
-            />
-          </button>
-        </div>
-      ))}
-      <p className="text-xs text-muted-foreground pt-1">
-        Настройки уведомлений сохранятся после подключения email-сервиса
-      </p>
+      <div className="flex flex-col gap-0.5">
+        <span className="text-sm font-medium">Куда присылать уведомления</span>
+        <span className="text-xs text-muted-foreground">
+          Готовые статформы и проблемы: ошибки формирования, проверка ТН ВЭД, доступ к OZON
+        </span>
+      </div>
+
+      <div role="radiogroup" aria-label="Канал уведомлений" className="grid grid-cols-3 gap-2">
+        {OPTIONS.map((o) => {
+          const available = (!o.needsEmail || hasEmail) && (!o.needsTelegram || hasTelegram)
+          const active = o.value === effective
+          return (
+            <Button
+              key={o.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              variant={active ? "default" : "outline"}
+              size="sm"
+              disabled={!available || isLoading}
+              onClick={() => select(o.value)}
+            >
+              {o.label}
+            </Button>
+          )
+        })}
+      </div>
+
+      {(!hasTelegram || !hasEmail) && (
+        <p className="text-xs text-muted-foreground">
+          {hasTelegram ? "Привяжите почту, чтобы получать уведомления и туда" : "Привяжите Telegram выше, чтобы получать уведомления в мессенджер"}
+        </p>
+      )}
     </div>
   )
 }
