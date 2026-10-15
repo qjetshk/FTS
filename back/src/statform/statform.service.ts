@@ -21,7 +21,9 @@ import { RedisService } from 'src/redis/redis.service';
 import type { RUN_STAGE } from '@prisma/client';
 import { StatformProducer } from './statform.producer';
 
-export const STALE_RUN_MS = 30 * 60 * 1000;
+// прогон без изменений дольше — прерван: n8n упал или выполнение остановили вручную (отмена — не ошибка,
+// Error Workflow на неё не срабатывает). Самая долгая законная пауза — ожидание отчёта OZON (до ~2.7 мин опроса)
+export const STALE_RUN_MS = 6 * 60 * 1000;
 // загруженный CSV ждёт обработчика очереди; дольше — значит прогон не стартовал, юзер загрузит заново
 const UPLOADED_CSV_TTL = 2 * 60 * 60;
 export const uploadedCsvKey = (organizationId: string, period: string) => `statform:csv:${organizationId}:${period}`;
@@ -266,7 +268,7 @@ export class StatformService {
     await this.runEvents.emit(run.id);
   }
 
-  // прогоны без изменений дольше STALE_RUN_MS: n8n упал посреди выполнения (Error Workflow на это не срабатывает)
+  // прогоны без изменений дольше STALE_RUN_MS: n8n упал или выполнение отменили вручную (Error Workflow на это не срабатывает)
   // или задача потерялась в очереди — без этого юзер видит вечную «генерацию» и не получает письма
   async failStaleRuns(): Promise<number> {
     const stale = await this.prisma.statFormRun.findMany({
@@ -281,7 +283,7 @@ export class StatformService {
       await this.failRun(
         organizationId,
         period,
-        'Генерация прервалась — сервис формирования не ответил. Запустите генерацию заново.',
+        'Генерация прервалась — формирование остановлено или сервис не ответил. Запустите генерацию заново.',
       ).catch((e: Error) => this.logger.error(`failStaleRuns: ${e.message}`));
     }
     return stale.length;

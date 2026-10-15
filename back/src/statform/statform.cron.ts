@@ -22,7 +22,8 @@ export class StatformCron {
     private readonly statformService: StatformService,
   ) {}
 
-  @Cron('*/10 * * * *')
+  // часто: прерванный прогон блокирует повторный запуск, пока не помечен ошибкой
+  @Cron('*/2 * * * *')
   async failStaleRuns(): Promise<void> {
     const count = await this.statformService.failStaleRuns();
     if (count) this.logger.warn(`Failed ${count} stale statform runs`);
