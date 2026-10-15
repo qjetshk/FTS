@@ -36,7 +36,8 @@ function assertCompletedPeriod(period: string) {
     throw new UnprocessableEntityException('Статформы формируются за завершённый месяц — выберите прошлый месяц');
   }
 }
-const MANUAL_RUNS_LIMIT = 2;
+// ручных запусков в час на организацию; STATFORM_MANUAL_RUNS_LIMIT=0 — без лимита (dev, отладка пайплайна)
+const MANUAL_RUNS_LIMIT = Number(process.env.STATFORM_MANUAL_RUNS_LIMIT ?? 2);
 const MANUAL_RUNS_WINDOW = 60 * 60;
 
 // '2026-09' → 'сентябрь 2026'
@@ -207,7 +208,7 @@ export class StatformService {
       }
 
       const limitKey = `statform:manual-runs:${org.id}`;
-      if ((await this.redis.incrWindow(limitKey, MANUAL_RUNS_WINDOW)) > MANUAL_RUNS_LIMIT) {
+      if (MANUAL_RUNS_LIMIT > 0 && (await this.redis.incrWindow(limitKey, MANUAL_RUNS_WINDOW)) > MANUAL_RUNS_LIMIT) {
         const retryAfter = await this.redis.ttl(limitKey);
         throw new HttpException(
           {
