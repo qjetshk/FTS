@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { ROUTES } from "@/shared/config"
+import { setAccessToken } from "@/shared/api"
 import { getApiErrorMessage } from "@/shared/lib"
 import { useTelegramLoginPollMutation, useTelegramLoginStartMutation } from "@/entities/user"
 
@@ -26,7 +27,7 @@ export function useTelegramLogin() {
         const res = await poll({ token: session.token }).unwrap()
         if (res.status === "ok") {
           clearInterval(timer)
-          localStorage.setItem("access_token", res.accessToken)
+          setAccessToken(res.accessToken)
           localStorage.setItem("user:v1", JSON.stringify(res.user))
           // дальше AuthGuard сам отправит на /welcome или /onboarding, если нужно
           router.push(ROUTES.dashboard)

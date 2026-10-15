@@ -1,11 +1,16 @@
-const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4200/api"
+import { API_URL, getAccessToken, refreshAccessToken } from "@/shared/api"
 
 export async function downloadStatform(id: string, fallbackName = "statform.xml"): Promise<void> {
-  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-  const res = await fetch(`${baseUrl}/statforms/${id}/download`, {
-    credentials: "include",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  })
+  const request = () => {
+    const token = getAccessToken()
+    return fetch(`${API_URL}/statforms/${id}/download`, {
+      credentials: "include",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+  }
+  let res = await request()
+  // токен в памяти мог истечь (или его ещё нет после перезагрузки) — обновляем и повторяем
+  if (res.status === 401 && (await refreshAccessToken())) res = await request()
   if (!res.ok) throw new Error(`Не удалось скачать файл (${res.status})`)
 
   const cd = res.headers.get("Content-Disposition") ?? ""

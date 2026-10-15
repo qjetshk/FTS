@@ -10,6 +10,7 @@ import {
   useSidebar, Button,
 } from "@/shared/ui"
 import { ROUTES } from "@/shared/config"
+import { setAccessToken } from "@/shared/api"
 import { cn } from "@/shared/lib"
 import { useUser, useLogoutMutation, userContact } from "@/entities/user"
 
@@ -57,7 +58,7 @@ export function UserFooter() {
     try {
       await logout().unwrap()
     } catch {}
-    localStorage.removeItem("access_token")
+    setAccessToken(null)
     localStorage.removeItem("user:v1")
     router.replace(ROUTES.login)
   }

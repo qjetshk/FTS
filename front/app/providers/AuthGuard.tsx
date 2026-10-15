@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react"
 import { useMeQuery, useResetOnboardingMutation } from "@/entities/user"
 import { useGetFirstOrgQuery } from "@/entities/organization"
 import { ROUTES } from "@/shared/config"
+import { setAccessToken } from "@/shared/api"
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -22,8 +23,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!userLoading && userError) {
-      localStorage.removeItem("access_token")
-      localStorage.removeItem("user")
+      setAccessToken(null)
+      localStorage.removeItem("user:v1")
       router.replace(ROUTES.login)
     }
   }, [userLoading, userError, router])

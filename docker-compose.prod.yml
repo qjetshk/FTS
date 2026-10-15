@@ -1,0 +1,106 @@
+# Прод: compose-проект Dokploy (Compose Path: ./docker-compose.prod.yml).
+# Значения ${...} — из Environment проекта в Dokploy (шаблон: .env.prod.example). Секретов в файле нет — репо публичный.
+# Домены (Traefik + Let's Encrypt) вешаются в UI Dokploy на сервисы front (easyfts.ru — лендинг и кабинет) и back (api.easyfts.ru), порты наружу не публикуем.
+services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    # очереди BullMQ: данные задач переживают рестарт
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+
+  # HTTP-прокси за рубеж: api.telegram.org из РФ недоступен. Конфиг собирает /opt/xray/update.sh по крону
+  xray:
+    image: teddysun/xray
+    restart: unless-stopped
+    volumes:
+      - /opt/xray/config.json:/etc/xray/config.json:ro
+
+  back:
+    build:
+      context: ./back
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4200
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      TELEGRAM_PROXY: http://xray:10809
+      FRONTEND_URL: ${FRONTEND_URL}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_EXPIRE: ${JWT_ACCESS_EXPIRE}
+      JWT_REFRESH_EXPIRE: ${JWT_REFRESH_EXPIRE}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      XML_ENCRYPTION_KEY: ${XML_ENCRYPTION_KEY}
+      N8N_URL: ${N8N_URL}
+      N8N_STATFORM_WEBHOOK_URL: ${N8N_STATFORM_WEBHOOK_URL}
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET}
+      N8N_API_KEY: ${N8N_API_KEY}
+      N8N_STATFORM_WORKFLOW_ID: ${N8N_STATFORM_WORKFLOW_ID}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_ADMIN_CHAT_ID: ${TELEGRAM_ADMIN_CHAT_ID}
+      BULL_BOARD_USER: ${BULL_BOARD_USER}
+      BULL_BOARD_PASSWORD: ${BULL_BOARD_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      xray:
+        condition: service_started
+    networks:
+      default:
+      # общая сеть с n8n (отдельный проект Dokploy): n8n ходит в бэк по http://fts-back:4200, без ngrok
+      dokploy-network:
+        aliases: [fts-back]
+
+  email-worker:
+    build:
+      context: ./email-worker
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      BACK_INTERNAL_URL: http://back:4200/api
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM}
+    depends_on:
+      - redis
+      - back
+
+  front:
+    build:
+      context: ./front
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY}
+        NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST}
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  dokploy-network:
+    external: true

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button, InputOTP, InputOTPGroup, InputOTPSlot } from "@/shared/ui"
 import { ROUTES } from "@/shared/config"
+import { setAccessToken } from "@/shared/api"
 import { getApiErrorMessage, getApiRetryAfter } from "@/shared/lib"
 import { useRequestCodeMutation, useVerifyCodeMutation } from "@/entities/user"
 import { useCountdown } from "../lib/use-countdown.lib"
@@ -29,7 +30,7 @@ export function CodeStep({ email, onChangeEmail }: Props) {
   const submit = async (value: string) => {
     try {
       const result = await verifyCode({ email, code: value }).unwrap()
-      localStorage.setItem("access_token", result.accessToken)
+      setAccessToken(result.accessToken)
       localStorage.setItem("user:v1", JSON.stringify(result.user))
       // дальше AuthGuard сам отправит на /welcome или /onboarding, если нужно
       router.push(ROUTES.dashboard)

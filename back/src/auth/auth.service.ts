@@ -33,6 +33,18 @@ export class AuthService {
     private telegram: TelegramService,
   ) {}
 
+  // На проде COOKIE_DOMAIN=.easyfts.ru: cookie видят и api., и app. (middleware фронта проверяет вход на сервере).
+  // В dev пусто — cookie только хоста бэка. sameSite none → обязателен secure (ngrok/прод всегда https)
+  private cookieOptions() {
+    return {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none' as const,
+      path: '/',
+      domain: this.config.get<string>('COOKIE_DOMAIN') || undefined,
+    };
+  }
+
   // ─── Email code (вход = регистрация) ──────────────────────────────────────────
 
   async requestCode(dto: RequestCodeDto, ipAddress?: string) {
@@ -164,7 +176,7 @@ export class AuthService {
       data: { isRevoked: true },
     });
 
-    res.clearCookie('refresh_token');
+    res.clearCookie('refresh_token', this.cookieOptions());
 
     return { message: 'Выход выполнен' };
   }
@@ -207,13 +219,7 @@ export class AuthService {
       expiresIn: accessExpire,
     });
 
-    res.cookie('refresh_token', newRefreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: convertExpireTime(refreshExpire),
-      path: '/',
-    });
+    res.cookie('refresh_token', newRefreshToken, { ...this.cookieOptions(), maxAge: convertExpireTime(refreshExpire) });
 
     const user = await this.prisma.user.findUnique({ where: { id: userId }, select: USER_VIEW_SELECT });
 
@@ -279,13 +285,7 @@ export class AuthService {
       });
     }
 
-    res.cookie('refresh_token', refreshToken, {
-      httpOnly: true,
-      secure: true, // sameSite: "none" requires secure; ngrok always serves https
-      sameSite: "none",
-      maxAge: convertExpireTime(refreshExpire),
-      path: '/',
-    });
+    res.cookie('refresh_token', refreshToken, { ...this.cookieOptions(), maxAge: convertExpireTime(refreshExpire) });
 
     const user = await this.prisma.user.findUnique({ where: { id: userId }, select: USER_VIEW_SELECT });
 

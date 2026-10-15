@@ -3,8 +3,13 @@ import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolk
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4200/api"
 
-export const getAccessToken = () =>
-  typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+// Access-токен только в памяти вкладки (не localStorage — его прочитает любой XSS).
+// После перезагрузки токена нет: первый запрос получит 401 и обновит его по httpOnly refresh-cookie
+let accessToken: string | null = null
+export const getAccessToken = () => accessToken
+export const setAccessToken = (token: string | null) => {
+  accessToken = token
+}
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_URL,
@@ -27,12 +32,12 @@ export function refreshAccessToken(): Promise<boolean> {
       const res = await fetch(`${API_URL}/auth/refresh`, { method: "POST", credentials: "include" })
       if (res.ok) {
         const data = (await res.json()) as { accessToken: string; user?: unknown }
-        localStorage.setItem("access_token", data.accessToken)
+        accessToken = data.accessToken
         if (data.user) localStorage.setItem("user:v1", JSON.stringify(data.user))
         return true
       }
       if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem("access_token")
+        accessToken = null
         localStorage.removeItem("user:v1")
         window.location.href = "/login"
       }
