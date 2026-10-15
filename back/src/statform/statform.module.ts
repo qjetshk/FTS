@@ -6,6 +6,7 @@ import { StatformController } from './statform.controller';
 import { StatformProducer } from './statform.producer';
 import { StatformProcessor } from './statform.processor';
 import { StatformCron } from './statform.cron';
+import { N8nWatchdogService } from './n8n-watchdog.service';
 import { CbrService } from './cbr.service';
 import { RunEventsService } from './run-events.service';
 import { ApiKeyGuard } from 'src/guards/api-key.guard';
@@ -22,6 +23,7 @@ import { NotificationModule } from '../notification/notification.module';
     StatformProducer,
     StatformProcessor,
     StatformCron,
+    N8nWatchdogService,
     CbrService,
     RunEventsService,
     ApiKeyGuard,

@@ -7,7 +7,7 @@ import { RUN_STAGES, type StatFormRunStage } from "@/entities/statform"
 
 const EASE = [0.16, 1, 0.3, 1] as const
 
-// Индикатор шагов генерации: полоса заполняется по мере смены этапа, текущий шаг «дышит»
+// Индикатор шагов генерации: полоса заполняется по мере смены этапа, у текущего шага пульсирует кольцо
 export function RunProgress({ stage }: { stage: StatFormRunStage | null }) {
   const current = Math.max(0, RUN_STAGES.findIndex((s) => s.stage === stage))
   const progress = (current + 1) / RUN_STAGES.length
@@ -44,12 +44,14 @@ export function RunProgress({ stage }: { stage: StatFormRunStage | null }) {
                       <Check className="size-2.5 text-primary-foreground" strokeWidth={3} />
                     </m.span>
                   ) : (
-                    <m.span
-                      key="dot"
-                      className={cn("size-2 rounded-full", active ? "bg-primary" : "bg-border")}
-                      animate={active ? { scale: [1, 1.6, 1], opacity: [1, 0.5, 1] } : { scale: 1, opacity: 1 }}
-                      transition={active ? { duration: 1.4, repeat: Infinity, ease: "easeInOut" } : { duration: 0.2 }}
-                    />
+                    // пульс — CSS-кольцо, а не animate с repeat: AnimatePresence initial={false} отключал анимацию
+                    // у точки, которая уже на экране при первом рендере (страницу открыли посреди генерации)
+                    <m.span key="dot" className="relative flex size-2" exit={{ opacity: 0 }}>
+                      {active && (
+                        <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60 motion-reduce:animate-none" />
+                      )}
+                      <span className={cn("relative inline-flex size-2 rounded-full", active ? "bg-primary" : "bg-border")} />
+                    </m.span>
                   )}
                 </AnimatePresence>
               </span>
