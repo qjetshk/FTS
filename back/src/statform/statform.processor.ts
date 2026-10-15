@@ -6,7 +6,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { QUEUE_STATFORM, JOB_GENERATE_XML } from '../queue/queue.constants';
 import { StatformJobData } from '../queue/queue.types';
 import { RunEventsService } from './run-events.service';
-import { StatformService } from './statform.service';
+import { StatformService, uploadedCsvKey } from './statform.service';
+import { RedisService } from '../redis/redis.service';
 
 @Injectable()
 export class StatformProcessor implements OnModuleInit, OnModuleDestroy {
@@ -18,6 +19,7 @@ export class StatformProcessor implements OnModuleInit, OnModuleDestroy {
     private readonly config: ConfigService,
     private readonly runEvents: RunEventsService,
     private readonly statformService: StatformService,
+    private readonly redis: RedisService,
   ) {
     this.logger.log('StatformProcessor instantiated');
   }
@@ -34,7 +36,7 @@ export class StatformProcessor implements OnModuleInit, OnModuleDestroy {
 
     this.worker = new Worker(QUEUE_STATFORM, async (job) => {
       if (job.name !== JOB_GENERATE_XML) return;
-      const { organizationId, period } = job.data as StatformJobData;
+      const { organizationId, period, source } = job.data as StatformJobData;
       // ключ и Client ID — актуальные из БД (юзер мог сменить ключ, пока задача ждала в очереди)
       const org = await this.prisma.organization.findUniqueOrThrow({
         where: { id: organizationId },
@@ -52,14 +54,27 @@ export class StatformProcessor implements OnModuleInit, OnModuleDestroy {
       await this.prisma.statForm.deleteMany({ where: { runId: run.id } });
       await this.runEvents.emit(run.id);
 
+      // загруженный отчёт: n8n получает CSV в base64 и пропускает выгрузку из OZON
+      let csvBase64: string | undefined;
+      if (source === 'upload') {
+        const csv = await this.redis.get(uploadedCsvKey(organizationId, period));
+        if (!csv) {
+          await this.statformService.failRun(organizationId, period, 'Загруженный отчёт не дождался обработки — загрузите его ещё раз.');
+          return;
+        }
+        csvBase64 = Buffer.from(csv, 'utf-8').toString('base64');
+      }
+
       const webhookUrl = this.config.getOrThrow<string>('N8N_STATFORM_WEBHOOK_URL');
       this.logger.log(`Calling n8n: ${webhookUrl}`);
 
       await axios.post(
         webhookUrl,
-        { client_id: org.ozonClientId, api_key: org.ozonApiKey, period },
-        { timeout: 10_000 },
+        { client_id: org.ozonClientId, api_key: org.ozonApiKey, period, ...(csvBase64 && { csv_base64: csvBase64 }) },
+        // файл в мегабайтах грузится дольше пустого запроса
+        { timeout: csvBase64 ? 60_000 : 10_000, maxBodyLength: Infinity },
       );
+      if (csvBase64) await this.redis.del(uploadedCsvKey(organizationId, period));
 
       this.logger.log(`n8n triggered: org=${organizationId} period=${period}`);
     }, {

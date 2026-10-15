@@ -13,10 +13,21 @@ const statformApi = baseApi.injectEndpoints({
       query: (body) => ({ url: "/statforms/run", method: "POST", body }),
       invalidatesTags: ["Statform"],
     }),
+    // генерация по CSV-отчёту OZON, который юзер выгрузил сам; бэк проверяет, что отчёт ровно за period
+    runStatformsUpload: build.mutation<RunStatformsResponse, RunStatformsBody & { file: File }>({
+      query: ({ period, orgId, file }) => {
+        const body = new FormData()
+        body.append("period", period)
+        body.append("orgId", orgId)
+        body.append("file", file)
+        return { url: "/statforms/run-upload", method: "POST", body }
+      },
+      invalidatesTags: ["Statform"],
+    }),
   }),
 })
 
-export const { useGetStatformRunsQuery, useRunStatformsMutation } = statformApi
+export const { useGetStatformRunsQuery, useRunStatformsMutation, useRunStatformsUploadMutation } = statformApi
 
 // Свежее состояние прогона из SSE → в кэш списка его организации без перезапроса (новый прогон — в начало).
 // SSE идёт по юзеру, поэтому прогоны других орг попадают только в их кэш, а не в открытый список

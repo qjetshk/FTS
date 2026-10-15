@@ -4,6 +4,10 @@ import {
   Get,
   Param,
   Query,
+  UploadedFile,
+  UseInterceptors,
+  BadRequestException,
+  UnprocessableEntityException,
   Body,
   Res,
   Sse,
@@ -11,7 +15,12 @@ import {
   type MessageEvent,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { SkipThrottle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { CsvReportError, validatePostingsCsv } from './csv-report';
+
+// отчёт об отправлениях за месяц — сотни КБ…единицы МБ; 20 МБ с запасом, но не «любой файл»
+const MAX_CSV_BYTES = 20 * 1024 * 1024;
 import type { Observable } from 'rxjs';
 import { RunEventsService } from './run-events.service';
 import { StatformService } from './statform.service';
@@ -50,6 +59,28 @@ export class StatformController {
   ) {
     const org = await this.statformService.resolveUserOrg(user.id, dto.orgId);
     return this.statformService.runStatform(org, dto.period);
+  }
+
+  // ── Ручной запуск по загруженному CSV-отчёту OZON (вместо выгрузки по API) ──
+  @Post('run-upload')
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_CSV_BYTES } }))
+  async runStatformUpload(
+    @Body() dto: RunStatformDto,
+    @UploadedFile() file: { buffer: Buffer } | undefined,
+    @CurrentUser() user: { id: string },
+  ) {
+    if (!file) throw new BadRequestException('Прикрепите CSV-файл отчёта');
+    const csv = file.buffer.toString('utf-8');
+    try {
+      validatePostingsCsv(csv, dto.period);
+    } catch (e) {
+      if (e instanceof CsvReportError) throw new UnprocessableEntityException(e.message);
+      throw e;
+    }
+    const org = await this.statformService.resolveUserOrg(user.id, dto.orgId);
+    return this.statformService.runStatform(org, dto.period, csv);
   }
 
   // ── Вызывается n8n — сохранить XML одной страны ───────────────────────────

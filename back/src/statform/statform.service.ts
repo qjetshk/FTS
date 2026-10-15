@@ -22,6 +22,18 @@ import type { RUN_STAGE } from '@prisma/client';
 import { StatformProducer } from './statform.producer';
 
 export const STALE_RUN_MS = 30 * 60 * 1000;
+// загруженный CSV ждёт обработчика очереди; дольше — значит прогон не стартовал, юзер загрузит заново
+const UPLOADED_CSV_TTL = 2 * 60 * 60;
+export const uploadedCsvKey = (organizationId: string, period: string) => `statform:csv:${organizationId}:${period}`;
+
+// статформы — за завершённый месяц: текущий ещё идёт, будущий пуст. Месяц считаем по Москве, как OZON
+function assertCompletedPeriod(period: string) {
+  const msk = new Date(Date.now() + 3 * 60 * 60 * 1000);
+  const current = `${msk.getUTCFullYear()}-${String(msk.getUTCMonth() + 1).padStart(2, '0')}`;
+  if (period >= current) {
+    throw new UnprocessableEntityException('Статформы формируются за завершённый месяц — выберите прошлый месяц');
+  }
+}
 const MANUAL_RUNS_LIMIT = 2;
 const MANUAL_RUNS_WINDOW = 60 * 60;
 
@@ -170,8 +182,10 @@ export class StatformService {
 
   // ── Поставить задачу генерации в очередь (ручной запуск) ─────────────────
   // Защита от спама кнопкой/API: одна активная генерация на период + лимит запусков в час на организацию
-  async runStatform(org: { id: string; ozonClientId: number; ozonApiKey: string }, period: string) {
+  // csv — отчёт, загруженный юзером вместо выгрузки из OZON (уже проверен validatePostingsCsv)
+  async runStatform(org: { id: string; ozonClientId: number; ozonApiKey: string }, period: string, csv?: string) {
     const label = formatPeriodRu(period);
+    assertCompletedPeriod(period);
 
     // мьютекс на проверку+блокировку: два одновременных запроса не проскочат оба
     const lockKey = `statform:run-lock:${org.id}:${period}`;
@@ -213,11 +227,15 @@ export class StatformService {
       await this.redis.del(lockKey);
     }
 
+    // CSV — в Redis, а не в данных задачи: файл в мегабайтах не нужен в истории очереди и Bull Board
+    if (csv) await this.redis.set(uploadedCsvKey(org.id, period), csv, UPLOADED_CSV_TTL);
+
     await this.producer.enqueue({
       organizationId: org.id,
       ozonClientId: org.ozonClientId,
       period,
       triggeredBy: 'manual',
+      source: csv ? 'upload' : 'ozon',
     });
 
     return { queued: true, period };

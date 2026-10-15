@@ -20,6 +20,8 @@ export interface StatformJobData {
   ozonClientId: number;
   period: string; // 'YYYY-MM'
   triggeredBy: 'cron' | 'manual';
+  // upload — юзер загрузил CSV-отчёт (лежит в Redis, uploadedCsvKey), n8n не ходит в OZON за отчётом
+  source?: 'ozon' | 'upload';
 }
 
 export interface ClassifyJobData {
