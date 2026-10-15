@@ -1,0 +1,8 @@
+export { LandingHero } from "./ui/LandingHero"
+export { PainSection } from "./ui/PainSection"
+export { HowItWorksSection } from "./ui/HowItWorksSection"
+export { StatsSection } from "./ui/StatsSection"
+export { FaqSection } from "./ui/FaqSection"
+export { FinalCta } from "./ui/FinalCta"
+export { LandingFooter } from "./ui/LandingFooter"
+export { FAQ_ITEMS } from "./config/landing.data"
