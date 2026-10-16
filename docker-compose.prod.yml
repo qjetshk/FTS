@@ -1,26 +1,16 @@
 # Прод: compose-проект Dokploy (Compose Path: ./docker-compose.prod.yml).
 # Значения ${...} — из Environment проекта в Dokploy (шаблон: .env.prod.example). Секретов в файле нет — репо публичный.
-# Домены (Traefik + Let's Encrypt) вешаются в UI Dokploy на сервисы front (easyfts.ru — лендинг и кабинет) и back (api.easyfts.ru), порты наружу не публикуем.
+# Образы собирает GitHub Actions (.github/workflows/images.yml): на сервере 2 ГБ RAM, сборка там не влезает.
+# Postgres — общий контейнер с pgvector (тот же, что у n8n), отдельная база и пользователь, ходим по dokploy-network.
+# Домены (Traefik + Let's Encrypt) вешаются в UI Dokploy на сервисы front (easyfts.ru, порт 3000) и back (api.easyfts.ru, порт 4200).
+# mem_limit — чтобы наш стек не выдавил n8n и Dokploy при нехватке памяти.
 services:
-  postgres:
-    image: postgres:15
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
-      interval: 5s
-      retries: 10
-
   redis:
     image: redis:7
     restart: unless-stopped
-    # очереди BullMQ: данные задач переживают рестарт
-    command: redis-server --appendonly yes
+    # очереди BullMQ: данные задач переживают рестарт, вытеснение ключей недопустимо
+    command: redis-server --appendonly yes --maxmemory 64mb --maxmemory-policy noeviction
+    mem_limit: 96m
     volumes:
       - redisdata:/data
 
@@ -28,17 +18,19 @@ services:
   xray:
     image: teddysun/xray
     restart: unless-stopped
+    mem_limit: 64m
     volumes:
       - /opt/xray/config.json:/etc/xray/config.json:ro
 
   back:
-    build:
-      context: ./back
+    image: ghcr.io/qjetshk/fts-back:latest
     restart: unless-stopped
+    mem_limit: 384m
     environment:
       NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=256
       PORT: 4200
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       TELEGRAM_PROXY: http://xray:10809
@@ -60,24 +52,21 @@ services:
       BULL_BOARD_USER: ${BULL_BOARD_USER}
       BULL_BOARD_PASSWORD: ${BULL_BOARD_PASSWORD}
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      xray:
-        condition: service_started
+      - redis
+      - xray
     networks:
       default:
-      # общая сеть с n8n (отдельный проект Dokploy): n8n ходит в бэк по http://fts-back:4200, без ngrok
+      # общая сеть с n8n и Postgres (другие проекты Dokploy): n8n ходит в бэк по http://fts-back:4200, без ngrok
       dokploy-network:
         aliases: [fts-back]
 
   email-worker:
-    build:
-      context: ./email-worker
+    image: ghcr.io/qjetshk/fts-email-worker:latest
     restart: unless-stopped
+    mem_limit: 192m
     environment:
       NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=128
       REDIS_HOST: redis
       REDIS_PORT: 6379
       BACK_INTERNAL_URL: http://back:4200/api
@@ -89,16 +78,13 @@ services:
       - back
 
   front:
-    build:
-      context: ./front
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-        NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY}
-        NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST}
+    image: ghcr.io/qjetshk/fts-front:latest
     restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      NODE_OPTIONS: --max-old-space-size=192
 
 volumes:
-  pgdata:
   redisdata:
 
 networks:
