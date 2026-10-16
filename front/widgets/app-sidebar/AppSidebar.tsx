@@ -1,6 +1,6 @@
 "use client"
 
-import { useSidebar, Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarSeparator } from "@/shared/ui"
+import { LogoMark, useSidebar, Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarSeparator } from "@/shared/ui"
 import { NavItems } from "./ui/NavItems"
 import { UserFooter } from "./ui/UserFooter"
 
@@ -9,11 +9,9 @@ function Logo() {
   const collapsed = state === "collapsed"
   return (
     <div className="flex items-center gap-2 px-2 py-1">
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold">
-        Ф
-      </div>
+      <LogoMark className="size-7 shrink-0" />
       {!collapsed && (
-        <span className="font-semibold text-sm text-sidebar-foreground truncate">easyfts</span>
+        <span className="font-display text-base font-medium tracking-tight text-sidebar-foreground truncate">easyfts</span>
       )}
     </div>
   )

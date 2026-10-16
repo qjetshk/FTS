@@ -6,7 +6,7 @@ import { AnimatePresence, m } from "framer-motion"
 import { buttonVariants } from "@/shared/ui"
 import { ROUTES } from "@/shared/config"
 import { cn } from "@/shared/lib"
-import { LogoMark } from "./LogoMark"
+import { LogoMark } from "@/shared/ui"
 
 const LINKS = [
   ["#problem", "Зачем"],

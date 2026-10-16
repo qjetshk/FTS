@@ -1,4 +1,4 @@
-import { LogoMark } from "./LogoMark"
+import { LogoMark } from "@/shared/ui"
 
 export function LandingFooter() {
   return (

@@ -5,7 +5,7 @@ import { AnimatePresence, m, useReducedMotion } from "framer-motion"
 import { Check, CheckCheck, FileCode2 } from "lucide-react"
 import { cn } from "@/shared/lib"
 import { DEMO_COUNTRIES, DEMO_ROWS, type DemoCountry } from "../config/hero-demo.data"
-import { LogoMark } from "./LogoMark"
+import { LogoMark } from "@/shared/ui"
 
 const VISIBLE = 7
 // строка на этой позиции «проверяется»; выше — уже разобранные

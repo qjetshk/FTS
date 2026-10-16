@@ -11,6 +11,8 @@ const SECURITY_HEADERS = [
 const nextConfig: NextConfig = {
   // прод-образ в Docker: server.js + только нужные node_modules
   output: "standalone",
+  // значок Next.js в углу мешает скриншотам интерфейса
+  devIndicators: false,
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },
