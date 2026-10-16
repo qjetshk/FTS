@@ -21,6 +21,7 @@ export {
   useUnlinkTelegramMutation,
   useTelegramLoginStartMutation,
   useTelegramLoginPollMutation,
+  useTelegramWebAppLoginMutation,
   useRequestEmailLinkCodeMutation,
   useVerifyEmailLinkMutation,
   useUpdateNotificationChannelMutation,

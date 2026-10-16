@@ -16,6 +16,7 @@ import { TelegramService } from 'src/telegram/telegram.service';
 import { escapeHtml } from 'src/telegram/telegram.format';
 import { USER_VIEW_SELECT, toUserView } from './user-view';
 import { hashToken } from './token-hash';
+import { verifyWebAppInitData } from './telegram-webapp';
 
 export type TelegramIdentity = { chatId: bigint; username: string | null; name: string };
 
@@ -88,6 +89,15 @@ export class AuthService {
       void this.telegram.alertAdmin(`🆕 Новый пользователь через Telegram: ${who}`);
     }
     return this.issueTokens(user.id, res, userAgent, ipAddress);
+  }
+
+  // Mini App: Telegram сам передаёт подписанные данные пользователя — проверяем подпись токеном бота.
+  // Cookie во встроенном браузере Telegram между запусками не живут, поэтому вход повторяется при каждом открытии
+  async loginWithTelegramWebApp(initData: string, res: Response, userAgent?: string, ipAddress?: string) {
+    const botToken = this.config.get<string>('TELEGRAM_BOT_TOKEN');
+    const identity = botToken ? verifyWebAppInitData(initData, botToken) : null;
+    if (!identity) throw new UnauthorizedException('Не удалось подтвердить вход из Telegram — откройте приложение заново');
+    return this.loginWithTelegram(identity, res, userAgent, ipAddress);
   }
 
   // ─── Привязка почты к аккаунту без неё (зарегистрировался через Telegram) ────────

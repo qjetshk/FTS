@@ -54,6 +54,10 @@ const authApi = baseApi.injectEndpoints({
     telegramLoginPoll: build.mutation<TelegramLoginPoll, { token: string }>({
       query: (body) => ({ url: "/auth/telegram/poll", method: "POST", body }),
     }),
+    // вход из Telegram Mini App по подписанному initData
+    telegramWebAppLogin: build.mutation<AuthResponse, { initData: string }>({
+      query: (body) => ({ url: "/auth/telegram/webapp", method: "POST", body }),
+    }),
     requestEmailLinkCode: build.mutation<{ message: string }, RequestCodeBody>({
       query: (body) => ({ url: "/auth/email/link/request-code", method: "POST", body }),
     }),
@@ -94,6 +98,7 @@ export const {
   useUnlinkTelegramMutation,
   useTelegramLoginStartMutation,
   useTelegramLoginPollMutation,
+  useTelegramWebAppLoginMutation,
   useRequestEmailLinkCodeMutation,
   useVerifyEmailLinkMutation,
   useUpdateNotificationChannelMutation,

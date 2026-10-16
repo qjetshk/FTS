@@ -1,6 +1,8 @@
 export const ROUTES = {
   home: "/",
   login: "/login",
+  // адрес Telegram Mini App (указан в BotFather)
+  miniApp: "/tg",
   welcome: "/welcome",
   onboarding: "/onboarding",
   dashboard: "/dashboard",

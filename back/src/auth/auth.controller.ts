@@ -17,6 +17,7 @@ import { RequestCodeDto } from './dto/request-code.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { TelegramPollDto } from './dto/telegram-poll.dto';
+import { TelegramWebAppDto } from './dto/telegram-webapp.dto';
 import { UpdateNotificationsDto } from './dto/update-notifications.dto';
 import { TelegramLoginService } from './telegram-login.service';
 import type { JwtPayload } from './interfaces/jwt.interface';
@@ -64,6 +65,18 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.telegramLogin.poll(dto.token, res, req.headers['user-agent'], req.ip);
+  }
+
+  // Вход из Telegram Mini App по подписанному initData
+  @Post('telegram/webapp')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  async telegramWebApp(
+    @Body() dto: TelegramWebAppDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.loginWithTelegramWebApp(dto.initData, res, req.headers['user-agent'], req.ip);
   }
 
   // ─── Привязка почты (для вошедших через Telegram) ──────────────────────────
