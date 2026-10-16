@@ -2,7 +2,7 @@
 
 import { m } from "framer-motion"
 import { StartLink } from "./StartLink"
-import Image from "next/image"
+import { HeroIllustration } from "./HeroIllustration"
 // временно: иллюстрация вместо веера листов — вернуть, если не зайдёт
 // import { HeroSheets } from "./HeroSheets"
 import { LandingNav } from "./LandingNav"
@@ -14,7 +14,7 @@ const EASE = [0.16, 1, 0.3, 1] as const
 export function LandingHero({ authed }: { authed: boolean }) {
   return (
     <section className="p-2 sm:p-3">
-      <div className="relative grid min-h-[640px] items-center gap-12 overflow-hidden rounded-3xl bg-green-950 bg-[radial-gradient(ellipse_60%_70%_at_75%_50%,rgb(21_128_61/0.45),transparent),radial-gradient(ellipse_50%_60%_at_0%_100%,rgb(22_101_52/0.45),transparent)] px-6 pt-28 pb-14 sm:px-12 lg:h-[calc(100svh-1.5rem)] lg:max-h-[920px] lg:pt-24 lg:pb-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] xl:grid-cols-[1fr_minmax(0,640px)] lg:py-0 lg:px-16 xl:gap-16 xl:px-24">
+      <div className="relative grid min-h-[640px] items-center gap-12 overflow-hidden rounded-3xl bg-green-950 bg-[radial-gradient(ellipse_60%_70%_at_75%_50%,rgb(21_128_61/0.45),transparent),radial-gradient(ellipse_50%_60%_at_0%_100%,rgb(22_101_52/0.45),transparent)] px-6 pt-28 pb-14 sm:px-12 lg:h-[calc(100svh-1.5rem)] lg:max-h-[920px] lg:pt-24 lg:pb-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] 2xl:grid-cols-[1fr_minmax(0,640px)] lg:py-0 lg:px-20 xl:gap-16 xl:px-32 2xl:px-40">
         <LandingNav authed={authed} />
 
         <m.div
@@ -44,14 +44,7 @@ export function LandingHero({ authed }: { authed: boolean }) {
           transition={{ duration: 0.6, delay: 0.15, ease: EASE }}
         >
           {/* <HeroSheets /> */}
-          <Image
-            src="/landing/hero-statform.webp"
-            alt=""
-            width={858}
-            height={760}
-            priority
-            className="w-full max-w-[640px] shrink-0 select-none lg:min-w-[480px]"
-          />
+          <HeroIllustration />
         </m.div>
       </div>
     </section>
