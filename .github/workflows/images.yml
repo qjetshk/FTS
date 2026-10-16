@@ -2,9 +2,8 @@
 # Dokploy только тянет готовые образы из GHCR (docker-compose.prod.yml).
 name: images
 
+# Пока только ручной запуск: Actions на аккаунте заблокированы биллингом, образы собираются локально.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

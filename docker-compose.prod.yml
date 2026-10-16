@@ -1,6 +1,8 @@
 # Прод: compose-проект Dokploy (Compose Path: ./docker-compose.prod.yml).
 # Значения ${...} — из Environment проекта в Dokploy (шаблон: .env.prod.example). Секретов в файле нет — репо публичный.
-# Образы собирает GitHub Actions (.github/workflows/images.yml): на сервере 2 ГБ RAM, сборка там не влезает.
+# Образы собираются вне сервера (2 ГБ RAM — сборка Next.js там не влезает) и загружаются в Docker сервера:
+#   docker build -t fts-<app>:latest <app> && docker save fts-<app>:latest | gzip | ssh <server> 'gunzip | docker load'
+# pull_policy: never — Dokploy берёт уже загруженный образ, а не ищет его в реестре.
 # Postgres — общий контейнер с pgvector (тот же, что у n8n), отдельная база и пользователь, ходим по dokploy-network.
 # Домены (Traefik + Let's Encrypt) вешаются в UI Dokploy на сервисы front (easyfts.ru, порт 3000) и back (api.easyfts.ru, порт 4200).
 # mem_limit — чтобы наш стек не выдавил n8n и Dokploy при нехватке памяти.
@@ -23,7 +25,8 @@ services:
       - /opt/xray/config.json:/etc/xray/config.json:ro
 
   back:
-    image: ghcr.io/qjetshk/fts-back:latest
+    image: fts-back:latest
+    pull_policy: never
     restart: unless-stopped
     mem_limit: 384m
     environment:
@@ -61,7 +64,8 @@ services:
         aliases: [fts-back]
 
   email-worker:
-    image: ghcr.io/qjetshk/fts-email-worker:latest
+    image: fts-email-worker:latest
+    pull_policy: never
     restart: unless-stopped
     mem_limit: 192m
     environment:
@@ -78,7 +82,8 @@ services:
       - back
 
   front:
-    image: ghcr.io/qjetshk/fts-front:latest
+    image: fts-front:latest
+    pull_policy: never
     restart: unless-stopped
     mem_limit: 256m
     environment:
