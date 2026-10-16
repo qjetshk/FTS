@@ -68,7 +68,7 @@ export function LandingNav({ authed }: { authed: boolean }) {
 
   return (
     <>
-      <header className="absolute inset-x-0 top-0 z-20 flex items-center gap-4 px-6 pt-5 sm:px-12 sm:pt-6 lg:pr-14 lg:pl-16 xl:pr-24 xl:pl-28">
+      <header className="absolute inset-x-0 top-0 z-20 flex items-center gap-4 px-6 pt-5 sm:px-12 sm:pt-6 lg:px-16 xl:px-24">
         <NavBar authed={authed} sticky={false} />
       </header>
 
@@ -79,7 +79,7 @@ export function LandingNav({ authed }: { authed: boolean }) {
             animate={{ y: 0 }}
             exit={{ y: "-100%" }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="fixed inset-x-0 top-0 z-50 flex h-16 items-center gap-4 px-6 sm:px-12 lg:pr-14 lg:pl-16 xl:pr-24 xl:pl-28"
+            className="fixed inset-x-0 top-0 z-50 flex h-16 items-center gap-4 px-6 sm:px-12 lg:px-16 xl:px-24"
           >
             <NavBar authed={authed} sticky />
           </m.header>
