@@ -1,0 +1,43 @@
+# Dokploy: Compose-сервис «back», Compose Path ./deploy/dokploy/back.yml, домен api.easyfts.ru → порт 4200.
+# Образ собирается вне сервера (2 ГБ RAM) и загружается: docker save fts-back:latest | gzip | ssh <server> 'gunzip | docker load'
+# Postgres (pgvector, общий с n8n) и Redis — отдельные сервисы Dokploy; все ходят по dokploy-network.
+services:
+  back:
+    image: fts-back:latest
+    pull_policy: never
+    restart: unless-stopped
+    mem_limit: 384m
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=256
+      PORT: 4200
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      TELEGRAM_PROXY: http://fts-xray:10809
+      FRONTEND_URL: ${FRONTEND_URL}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_EXPIRE: ${JWT_ACCESS_EXPIRE}
+      JWT_REFRESH_EXPIRE: ${JWT_REFRESH_EXPIRE}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      XML_ENCRYPTION_KEY: ${XML_ENCRYPTION_KEY}
+      N8N_URL: ${N8N_URL}
+      N8N_STATFORM_WEBHOOK_URL: ${N8N_STATFORM_WEBHOOK_URL}
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET}
+      N8N_API_KEY: ${N8N_API_KEY}
+      N8N_STATFORM_WORKFLOW_ID: ${N8N_STATFORM_WORKFLOW_ID}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_ADMIN_CHAT_ID: ${TELEGRAM_ADMIN_CHAT_ID}
+      BULL_BOARD_USER: ${BULL_BOARD_USER}
+      BULL_BOARD_PASSWORD: ${BULL_BOARD_PASSWORD}
+    networks:
+      dokploy-network:
+        # n8n и email-worker ходят в бэк по http://fts-back:4200
+        aliases: [fts-back]
+
+networks:
+  dokploy-network:
+    external: true

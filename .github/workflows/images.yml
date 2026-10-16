@@ -1,5 +1,5 @@
 # Сборка прод-образов в GitHub Actions: на сервере 2 ГБ RAM, сборка Next.js там уронит n8n и Dokploy.
-# Dokploy только тянет готовые образы из GHCR (docker-compose.prod.yml).
+# Dokploy только запускает готовые образы (deploy/dokploy/*.yml).
 name: images
 
 # Пока только ручной запуск: Actions на аккаунте заблокированы биллингом, образы собираются локально.

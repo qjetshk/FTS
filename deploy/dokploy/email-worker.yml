@@ -1,0 +1,22 @@
+# Dokploy: Compose-сервис «email-worker», Compose Path ./deploy/dokploy/email-worker.yml. Без домена — наружу не торчит.
+services:
+  email-worker:
+    image: fts-email-worker:latest
+    pull_policy: never
+    restart: unless-stopped
+    mem_limit: 192m
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=128
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      BACK_INTERNAL_URL: http://fts-back:4200/api
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM}
+    networks: [dokploy-network]
+
+networks:
+  dokploy-network:
+    external: true

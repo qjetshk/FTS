@@ -43,6 +43,7 @@ async function bootstrap() {
     const redisConnection = {
       host: config.getOrThrow<string>('REDIS_HOST'),
       port: config.get<number>('REDIS_PORT', 6379),
+      password: config.get<string>('REDIS_PASSWORD') || undefined,
       maxRetriesPerRequest: null as null,
       enableReadyCheck: false,
     };

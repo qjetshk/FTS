@@ -1,0 +1,16 @@
+# Dokploy: Compose-сервис «xray» — HTTP-прокси за рубеж для бота (api.telegram.org из РФ недоступен).
+# Конфиг собирает /opt/xray/update.sh по крону; бэк ходит через http://fts-xray:10809. Портов наружу нет.
+services:
+  xray:
+    image: teddysun/xray
+    restart: unless-stopped
+    mem_limit: 64m
+    volumes:
+      - /opt/xray/config.json:/etc/xray/config.json:ro
+    networks:
+      dokploy-network:
+        aliases: [fts-xray]
+
+networks:
+  dokploy-network:
+    external: true

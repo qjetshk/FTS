@@ -1,0 +1,15 @@
+# Dokploy: Compose-сервис «front», Compose Path ./deploy/dokploy/front.yml, домен easyfts.ru → порт 3000.
+# NEXT_PUBLIC_* вшиваются при сборке образа: docker build --build-arg NEXT_PUBLIC_API_URL=https://api.easyfts.ru/api ...
+services:
+  front:
+    image: fts-front:latest
+    pull_policy: never
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      NODE_OPTIONS: --max-old-space-size=192
+    networks: [dokploy-network]
+
+networks:
+  dokploy-network:
+    external: true

@@ -28,6 +28,7 @@ export class StatformProcessor implements OnModuleInit, OnModuleDestroy {
     const connection = {
       host: this.config.getOrThrow<string>('REDIS_HOST'),
       port: this.config.get<number>('REDIS_PORT', 6379),
+      password: this.config.get<string>('REDIS_PASSWORD') || undefined,
       maxRetriesPerRequest: null as null,
       enableReadyCheck: false,
     };

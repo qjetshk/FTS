@@ -14,6 +14,8 @@ import { RedisService } from './redis.service';
         new Redis({
           host: cfg.getOrThrow('REDIS_HOST'),
           port: cfg.get<number>('REDIS_PORT', 6379),
+          // на проде Redis — база Dokploy с паролем, в dev без пароля
+          password: cfg.get<string>('REDIS_PASSWORD') || undefined,
         }),
     },
     RedisService,

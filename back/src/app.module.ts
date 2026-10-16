@@ -30,6 +30,7 @@ import { DEFAULT_JOB_OPTIONS } from './queue/queue.constants';
         connection: {
           host: cfg.getOrThrow('REDIS_HOST'),
           port: cfg.get<number>('REDIS_PORT', 6379),
+          password: cfg.get<string>('REDIS_PASSWORD') || undefined,
           maxRetriesPerRequest: null,
           enableReadyCheck: false,
         },
