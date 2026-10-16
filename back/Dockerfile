@@ -2,7 +2,8 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --no-audit --no-fund
+# кэш npm между сборками + повторы: сеть до registry.npmjs.org бывает нестабильной
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
 COPY . .
 # generate не ходит в БД, но prisma.config требует DATABASE_URL — подставляем заглушку только на шаг сборки
 RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npx prisma generate && npm run build

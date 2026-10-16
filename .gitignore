@@ -172,3 +172,6 @@ storybook-static
 # Курсовая работа (local only)
 # -----------------
 kursach/
+
+# прод-окружение для вставки в Dokploy — секреты, не коммитить
+deploy/dokploy/*.env
