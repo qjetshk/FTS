@@ -86,6 +86,12 @@ export class ProductsNeedReviewPayload {
   products!: ReviewProductItem[];
 }
 
+// за месяц не было отправлений в ЕАЭС — статформа не нужна (прогон READY без файлов)
+export class StatformNoSalesPayload {
+  @Matches(PERIOD, { message: 'period must be YYYY-MM' })
+  period!: string;
+}
+
 export class OzonApiErrorPayload {
   // техническая причина — только для логов/истории задачи, юзеру не показывается
   @IsOptional()
@@ -97,6 +103,7 @@ export class OzonApiErrorPayload {
 export const NOTIFICATION_PAYLOADS = {
   'statform.ready': StatformReadyPayload,
   'statform.failed': StatformFailedPayload,
+  'statform.no-sales': StatformNoSalesPayload,
   'products.need-review': ProductsNeedReviewPayload,
   'ozon.api-error': OzonApiErrorPayload,
 } satisfies Record<string, ClassConstructor<object>>;
@@ -111,6 +118,7 @@ export const NOTIFICATION_ACTION_PATH: {
 } = {
   'statform.ready': '/dashboard/statforms',
   'statform.failed': (p) => (p.cause === 'ozon_auth' ? '/dashboard/organizations' : '/dashboard/statforms'),
+  'statform.no-sales': '/dashboard/statforms',
   'products.need-review': '/dashboard/products',
   'ozon.api-error': '/dashboard/organizations',
 };

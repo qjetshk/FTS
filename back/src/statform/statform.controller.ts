@@ -103,7 +103,7 @@ export class StatformController {
   @UseGuards(ApiKeyGuard)
   async completeRun(@Body() dto: RunCompleteDto) {
     const orgId = await this.statformService.resolveOrgId(dto);
-    await this.statformService.completeRun(orgId, dto.period, dto.failedCountries);
+    await this.statformService.completeRun(orgId, dto.period, dto.failedCountries, dto.noSales);
     return { ok: true };
   }
 

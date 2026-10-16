@@ -39,6 +39,10 @@ export function useStatformRunEvents() {
       const ready = run.statForms.filter((f) => f.status === "READY").length
       switch (run.status) {
         case "READY":
+          if (ready === 0) {
+            toast.info(`За ${title} статформа не нужна`, { description: "Отгрузок в страны ЕАЭС в этом месяце не было" })
+            break
+          }
           toast.success(`Статформы за ${title} готовы`, {
             description: `${filesLabel(ready)} — можно скачать здесь или из письма`,
           })

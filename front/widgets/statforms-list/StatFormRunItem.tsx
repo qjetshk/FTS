@@ -77,7 +77,10 @@ export function StatFormRunItem({ run }: { run: StatFormRun }) {
           )}
 
           {fileCount === 0 && !active && run.status !== "NEEDS_REVIEW" && (
-            <p className="text-sm text-muted-foreground">Нет файлов</p>
+            <p className="text-sm text-muted-foreground">
+              {/* READY без файлов — за месяц не было отгрузок в ЕАЭС */}
+              {run.status === "READY" ? "Продаж в ЕАЭС не было — статформа за этот месяц не нужна" : "Нет файлов"}
+            </p>
           )}
 
           {/* сетка всегда в дереве — AnimatePresence должен пережить удаление последней плитки */}

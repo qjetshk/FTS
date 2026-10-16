@@ -44,6 +44,16 @@ export const TELEGRAM_MESSAGES: {
     };
   },
 
+  'statform.no-sales': (p, { orgName, actionUrl }) => ({
+    html:
+      `ℹ️ <b>За ${formatPeriod(p.period)} статформа не нужна</b>
+${escapeHtml(orgName)}
+
+` +
+      'В этом месяце не было отгрузок в страны ЕАЭС, по которым статформу подаёт продавец. Ничего делать не нужно.',
+    buttons: [{ text: 'Открыть статформы', url: actionUrl }],
+  }),
+
   'products.need-review': (p, { orgName, actionUrl }) => {
     const listed = p.products.slice(0, MAX_LISTED).map((x) => `• ${escapeHtml(x.name)} — SKU ${x.sku}`);
     const rest = p.products.length - listed.length;

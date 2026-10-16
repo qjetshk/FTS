@@ -3,6 +3,7 @@ import { WelcomeEmail } from './templates/welcome';
 import { LoginCodeTemplate } from './templates/login-code';
 import { StatformReadyTemplate } from './templates/statform-ready';
 import { StatformFailedTemplate } from './templates/statform-failed';
+import { StatformNoSalesTemplate } from './templates/statform-no-sales';
 import { OzonApiErrorTemplate } from './templates/ozon-api-error';
 import { ProductsNeedReviewTemplate } from './templates/products-need-review';
 import { formatPeriod, productsCount } from './templates/format.util';
@@ -34,6 +35,10 @@ export const EMAIL_TEMPLATES: { [T in EmailJobName]: EmailTemplate<T> } = {
   'statform.failed': {
     subject: (d) => `Не удалось сформировать статформы за ${formatPeriod(d.period)}`,
     render: (d) => StatformFailedTemplate(d),
+  },
+  'statform.no-sales': {
+    subject: (d) => `Статформа за ${formatPeriod(d.period)} не нужна — продаж в ЕАЭС не было`,
+    render: (d) => StatformNoSalesTemplate(d),
   },
   'products.need-review': {
     subject: (d) => `Статформы за ${formatPeriod(d.period)}: проверьте ТН ВЭД (${productsCount(d.products.length)})`,

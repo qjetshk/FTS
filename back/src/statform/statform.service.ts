@@ -292,7 +292,7 @@ export class StatformService {
 
   // итоговый колбэк n8n — один на прогон, после Create XML по всем странам.
   // failedCountries — страны, где create-n8n упал (собравшиеся уже лежат в READY)
-  async completeRun(organizationId: string, period: string, failedCountries: FailedCountryItem[] = []) {
+  async completeRun(organizationId: string, period: string, failedCountries: FailedCountryItem[] = [], noSales = false) {
     this.logger.log(
       `completeRun: org=${organizationId} period=${period} failed=${failedCountries.map((f) => f.country).join(',') || '-'}`,
     );
@@ -303,6 +303,19 @@ export class StatformService {
     // прогон уже завершился ошибкой в этом запуске (нет курса ЦБ, товары на проверку) — не перетираем;
     // при новом запуске процессор сам переводит его в BUILDING
     if (!found || found.status !== 'BUILDING') return;
+
+    // продаж в ЕАЭС не было: это успешный итог без файлов, а не ошибка
+    if (noSales) {
+      await this.prisma.statFormRun.update({
+        where: { id: found.id },
+        data: { status: 'READY', stage: null, completedAt: new Date(), detectedCountries: [] },
+      });
+      await this.runEvents.emit(found.id);
+      this.notifications
+        .notify(organizationId, 'statform.no-sales', { period }, found.id)
+        .catch((e) => this.logger.error(`statform.no-sales notify failed: ${e.message}`));
+      return;
+    }
 
     // XML старой версии остаётся в записи, но скачать его нельзя — файл отдаётся только для READY
     for (const { country } of failedCountries) {

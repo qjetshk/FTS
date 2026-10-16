@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayNotEmpty,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -77,4 +78,9 @@ export class RunCompleteDto extends RunCallbackDto {
   @ValidateNested({ each: true })
   @Type(() => FailedCountryItem)
   failedCountries?: FailedCountryItem[];
+
+  // за месяц не нашлось отправлений в ЕАЭС — статформы не нужны
+  @IsOptional()
+  @IsBoolean()
+  noSales?: boolean;
 }
