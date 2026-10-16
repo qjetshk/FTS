@@ -3,12 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { createHash } from 'crypto';
 import { plainToInstance, type ClassConstructor } from 'class-transformer';
 import { validate, type ValidationError } from 'class-validator';
-import type { NOTIFICATION_CHANNEL } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { EmailProducerService, type EnqueueResult } from 'src/email-producer/email-producer.service';
 import { TelegramService } from 'src/telegram/telegram.service';
 import { StatformFileService } from 'src/statform/statform-file.service';
 import { RedisService } from 'src/redis/redis.service';
+import { deliveryTargets } from './delivery-targets';
 import { escapeHtml } from 'src/telegram/telegram.format';
 import { TELEGRAM_MESSAGES, type TelegramMessage } from './telegram.messages';
 import { SendNotificationDto } from './dto/send-notification.dto';
@@ -33,19 +33,6 @@ function contentHash(value: unknown): string {
     return v;
   };
   return createHash('sha1').update(JSON.stringify(normalize(value))).digest('hex').slice(0, 12);
-}
-
-// Канал выбирает юзер, но выключить уведомления совсем нельзя: выбранный канал недоступен
-// (Telegram отвязан/бот заблокирован, почты нет) → шлём в тот, что есть
-function deliveryTargets(user: { email: string | null; telegramChatId: bigint | null; notificationChannel: NOTIFICATION_CHANNEL }) {
-  const wantEmail = user.notificationChannel !== 'TELEGRAM';
-  const wantTelegram = user.notificationChannel !== 'EMAIL';
-  const canEmail = !!user.email;
-  const canTelegram = !!user.telegramChatId;
-  return {
-    email: canEmail && (wantEmail || !canTelegram) ? user.email : null,
-    chatId: canTelegram && (wantTelegram || !canEmail) ? user.telegramChatId : null,
-  };
 }
 
 // 'payload.products.0.name: name must be a string' — ошибки вложенных объектов лежат в children
