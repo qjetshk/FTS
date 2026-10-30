@@ -84,7 +84,7 @@ function OrgCrumbSelect({ pageBase }: OrgCrumbProps) {
     return (
       <Link
         href={selectedOrg ? orgHref(selectedOrg.id) : pageBase}
-        className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-sm text-foreground hover:bg-accent transition-colors min-w-0 max-w-56"
+        className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-sm text-foreground hover:bg-accent transition-colors min-w-0 max-w-full sm:max-w-56"
       >
         <Building2 strokeWidth={1.5} className="size-3.5 text-muted-foreground shrink-0" />
         <span className="truncate">{name}</span>
@@ -104,7 +104,7 @@ function OrgCrumbSelect({ pageBase }: OrgCrumbProps) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-sm text-foreground hover:bg-accent transition-colors max-w-56"
+        className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-sm text-foreground hover:bg-accent transition-colors max-w-full sm:max-w-56"
       >
         <Building2 strokeWidth={1.5} className="size-3.5 text-muted-foreground shrink-0" />
         <span className="truncate">{name}</span>
@@ -169,25 +169,26 @@ export function DashboardBreadcrumb() {
   const isOrgScoped = ORG_SCOPED.has(lastSeg)
   const pageBase = ORG_PAGE_BASE[lastSeg] ?? ""
 
+  // на телефоне в шапку не помещается весь путь: оставляем только последний уровень (орга + страница), без переноса строк
   return (
-    <Breadcrumb>
-      <BreadcrumbList>
+    <Breadcrumb className="min-w-0 flex-1">
+      <BreadcrumbList className="min-w-0 flex-nowrap">
         {crumbs.map((crumb, i) => (
           <React.Fragment key={crumb.href}>
-            {i > 0 && <BreadcrumbSeparator />}
+            {i > 0 && <BreadcrumbSeparator className="hidden sm:block" />}
             {crumb.isLast && isOrgScoped && crumb.seg !== "organizations" ? (
               // products/statforms: OrgCrumb и Page — два отдельных <li>
               <>
-                <BreadcrumbItem>
+                <BreadcrumbItem className="min-w-0">
                   <OrgCrumb pageBase={pageBase} />
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
-                <BreadcrumbItem>
+                <BreadcrumbItem className="shrink-0">
                   <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
                 </BreadcrumbItem>
               </>
             ) : (
-              <BreadcrumbItem>
+              <BreadcrumbItem className={crumb.isLast ? "min-w-0" : "hidden sm:inline-flex"}>
                 {crumb.isLast ? (
                   crumb.seg === "organizations" ? (
                     <OrgCrumb pageBase={pageBase} />
