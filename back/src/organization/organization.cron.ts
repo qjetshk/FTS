@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrganizationService } from './organization.service';
+import { decryptField } from '../utils/field-crypto.util';
 
 @Injectable()
 export class OrganizationCron {
@@ -23,7 +24,7 @@ export class OrganizationCron {
     // по очереди, чтобы не запускать N параллельных прогонов LLM в n8n
     for (const org of orgs) {
       try {
-        await this.organizationService.triggerClassify(String(org.ozonClientId), org.ozonApiKey);
+        await this.organizationService.triggerClassify(String(org.ozonClientId), decryptField(org.ozonApiKey));
       } catch (e) {
         this.logger.warn(`Classify failed for client ${org.ozonClientId}: ${(e as Error).message}`);
       }

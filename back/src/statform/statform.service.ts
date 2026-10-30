@@ -13,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { buildStatFormXml } from './statform.builder';
 import { CreateStatformDto } from './dto/create-statform.dto';
 import { encrypt } from 'src/utils/crypto.util';
+import { decryptDocument } from 'src/utils/field-crypto.util';
 import { CbrService, CbrUnavailableError } from './cbr.service';
 import type { ReviewProductItem, StatformFailCause } from '../notification/notification.events';
 import type { FailedCountryItem } from './dto/run-callback.dto';
@@ -119,7 +120,7 @@ export class StatformService {
     const xml = await buildStatFormXml({
       org,
       declarant,
-      doc: declarant.document,
+      doc: decryptDocument(declarant.document),
       countryCode: country,
       period,
       usdRate,

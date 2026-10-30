@@ -14,6 +14,7 @@ import { apiKeySchema, type ApiKeyValues } from "../model/api-key.schema"
 
 type Props = {
   orgId: string
+  // маска «••••3c80»: сам ключ бэк на фронт не отдаёт
   currentApiKey: string
   clientId: number
   userId: string
@@ -32,7 +33,7 @@ export function ApiKeyForm({ orgId, currentApiKey, clientId, userId }: Props) {
 
   const form = useForm<ApiKeyValues>({
     resolver: zodResolver(apiKeySchema),
-    defaultValues: { ozonApiKey: currentApiKey },
+    defaultValues: { ozonApiKey: "" },
   })
 
   const isDirty = form.formState.isDirty
@@ -41,7 +42,7 @@ export function ApiKeyForm({ orgId, currentApiKey, clientId, userId }: Props) {
     try {
       await updateOrg({ id: orgId, ozonApiKey: values.ozonApiKey }).unwrap()
       toast.success("API-ключ обновлён")
-      form.reset({ ozonApiKey: values.ozonApiKey })
+      form.reset({ ozonApiKey: "" })
       setTimeout(() => refetch(), 400)
     } catch {
       toast.error("Не удалось обновить ключ")
@@ -104,6 +105,7 @@ export function ApiKeyForm({ orgId, currentApiKey, clientId, userId }: Props) {
                   <Input
                     {...field}
                     type={showKey ? "text" : "password"}
+                    placeholder={`Текущий ключ ${currentApiKey} — введите новый, чтобы заменить`}
                     className={
                       !isDirty && validationResult && !validationResult.valid
                         ? "border-destructive pr-9"

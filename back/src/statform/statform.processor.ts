@@ -8,6 +8,7 @@ import { StatformJobData } from '../queue/queue.types';
 import { RunEventsService } from './run-events.service';
 import { StatformService, uploadedCsvKey } from './statform.service';
 import { RedisService } from '../redis/redis.service';
+import { decryptField } from '../utils/field-crypto.util';
 
 @Injectable()
 export class StatformProcessor implements OnModuleInit, OnModuleDestroy {
@@ -71,7 +72,7 @@ export class StatformProcessor implements OnModuleInit, OnModuleDestroy {
 
       await axios.post(
         webhookUrl,
-        { client_id: org.ozonClientId, api_key: org.ozonApiKey, period, ...(csvBase64 && { csv_base64: csvBase64 }) },
+        { client_id: org.ozonClientId, api_key: decryptField(org.ozonApiKey), period, ...(csvBase64 && { csv_base64: csvBase64 }) },
         // файл в мегабайтах грузится дольше пустого запроса
         { timeout: csvBase64 ? 60_000 : 10_000, maxBodyLength: Infinity },
       );

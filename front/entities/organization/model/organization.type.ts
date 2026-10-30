@@ -25,6 +25,7 @@ export type Declarant = {
 export type Organization = {
   id: string
   ozonClientId: number
+  // маска «••••3c80» — сам ключ бэк не отдаёт
   ozonApiKey: string
   fullOrg: string
   fullOpf: string

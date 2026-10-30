@@ -17,6 +17,7 @@ import { UpdateDeclarantDto } from './dto/update-declarant.dto';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { RedisService } from 'src/redis/redis.service';
 import { checkOzonKey } from './ozon-key';
+import { decryptDocument, decryptField, encryptDocument, encryptField, maskSecret } from 'src/utils/field-crypto.util';
 
 // прогон classify_TNVED идёт часы; RUNNING старше этого считаем зависшим и не блокирующим новый запуск
 const SYNC_STALE_MS = 4 * 60 * 60 * 1000;
@@ -49,6 +50,16 @@ const DECLARANT_SELECT = {
     document: true,
   },
 } as const;
+
+// ответ фронту: ключ OZON — маской, документ декларанта — расшифрованным (его владелец сам и заполнял)
+type DocumentRow = { series: string | null; number: string; issuedBy: string };
+function toClient<T extends { ozonApiKey: string; declarant?: { document: DocumentRow | null } | null }>(org: T): T {
+  return {
+    ...org,
+    ozonApiKey: maskSecret(org.ozonApiKey),
+    declarant: org.declarant && { ...org.declarant, document: decryptDocument(org.declarant.document) },
+  };
+}
 
 @Injectable()
 export class OrganizationService {
@@ -89,7 +100,7 @@ export class OrganizationService {
         inn: dto.inn,
         ogrn: dto.ogrn,
         okato5: dto.okato5,
-        ozonApiKey: dto.api_key,
+        ozonApiKey: encryptField(dto.api_key),
         ozonClientId: Number(dto.client_id),
         postalCode: dto.postal_code,
         region: dto.region,
@@ -140,7 +151,7 @@ export class OrganizationService {
     });
 
     if (!organization) throw new NotFoundException('Организация не найдена');
-    return organization;
+    return toClient(organization);
   }
 
   async getFirstOrganization(userId: string) {
@@ -168,7 +179,7 @@ export class OrganizationService {
       throw new NotFoundException('Организация не найдена');
     }
 
-    return organization;
+    return toClient(organization);
   }
 
   async getOrganizationId(id: string, clientId: string) {
@@ -218,7 +229,7 @@ export class OrganizationService {
       include: { declarant: DECLARANT_SELECT },
     });
     if (!organization) throw new NotFoundException('Организация не создана — проверьте ключи OZON');
-    return organization;
+    return toClient(organization);
   }
 
   // ручной запуск / онбординг: ждём только захват статуса, сам прогон (часы) идёт в фоне
@@ -232,7 +243,7 @@ export class OrganizationService {
 
     const started = await this.acquireSync(ozonClientId);
     if (started) {
-      this.runClassify(clientId, org.ozonApiKey).catch((e) =>
+      this.runClassify(clientId, decryptField(org.ozonApiKey)).catch((e) =>
         this.logger.warn(`Classify failed for client ${clientId}: ${(e as Error).message}`),
       );
     }
@@ -301,9 +312,11 @@ export class OrganizationService {
   }
 
   async updateOrganization(userId: string, dto: UpdateOrganizationDto) {
+    const data = pick(dto, ORG_EDITABLE);
+    if (typeof data.ozonApiKey === 'string') data.ozonApiKey = encryptField(data.ozonApiKey);
     const { count } = await this.prisma.organization.updateMany({
       where: { id: dto.id, userId },
-      data: pick(dto, ORG_EDITABLE),
+      data,
     });
     if (!count) throw new NotFoundException('Организация не найдена');
     return { message: 'Организация обновлена!' };
@@ -315,7 +328,7 @@ export class OrganizationService {
       include: { document: true },
     });
     if (!declarant) throw new NotFoundException('Декларант не найден');
-    return declarant;
+    return { ...declarant, document: decryptDocument(declarant.document) };
   }
 
   async updateDeclarant(userId: string, dto: UpdateDeclarantDto) {
@@ -337,12 +350,14 @@ export class OrganizationService {
 
     if (!org) throw new NotFoundException('Организация не найдена');
 
-    const check = await checkOzonKey(org.ozonClientId, org.ozonApiKey);
+    const check = await checkOzonKey(org.ozonClientId, decryptField(org.ozonApiKey));
     return check.valid ? { valid: true } : { valid: false, error: check.error };
   }
 
   async createDocument(userId: string, dto: CreateDocumentDto) {
-    const { declarantId, issuedAt, ...data } = dto;
+    const { declarantId, issuedAt, ...rest } = dto;
+    // серия, номер и «кем выдан» — в БД только зашифрованными
+    const data = encryptDocument(rest);
     const owned = await this.prisma.declarant.count({ where: { id: declarantId, organization: { userId } } });
     if (!owned) throw new NotFoundException('Декларант не найден');
 

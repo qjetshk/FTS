@@ -18,7 +18,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "seed:tnved": "ts-node --transpile-only prisma/seed/tnved.seed.ts"
+    "seed:tnved": "ts-node --transpile-only prisma/seed/tnved.seed.ts",
+    "encrypt:fields": "ts-node --transpile-only prisma/scripts/encrypt-fields.ts"
   },
   "dependencies": {
     "@bull-board/api": "^7.1.5",

@@ -14,6 +14,8 @@ ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
+# утилиты шифрования нужны скрипту prisma/scripts/encrypt-fields.ts (ts-node, исходники)
+COPY --from=build /app/src/utils ./src/utils
 COPY package*.json prisma.config.ts tsconfig.json ./
 EXPOSE 4200
 # миграции до старта: новая схема применяется вместе с выкаткой кода

@@ -83,7 +83,7 @@ export class StatformController {
     return this.statformService.runStatform(org, dto.period, csv);
   }
 
-  // ── Вызывается n8n — сохранить XML одной страны ───────────────────────────
+  // ── Вызывается n8n — данные одной страны; XML собирает и шифрует бэк ──
   @Post('create-n8n')
   @UseGuards(ApiKeyGuard)
   async createStatformByN8N(@Body() dto: CreateStatformDto) {
