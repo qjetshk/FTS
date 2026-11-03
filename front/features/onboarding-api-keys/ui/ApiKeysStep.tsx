@@ -66,7 +66,7 @@ export function ApiKeysStep({ onComplete }: Props) {
       <div className="text-center">
         <h2 className="text-xl font-semibold">Подключите магазин OZON</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Найдите ключи в личном кабинете OZON —{" "}
+          Найдите ключи в личном кабинете OZON:{" "}
           <Link
             href="https://seller.ozon.ru/app/settings/api-keys"
             target="_blank"
@@ -83,7 +83,7 @@ export function ApiKeysStep({ onComplete }: Props) {
         <li className="flex gap-2">
           <KeyRound className="size-4 shrink-0 mt-0.5" />
           <span>
-            Создайте ключ с ролью <span className="font-medium text-foreground">Admin read only</span> — сервис
+            Создайте ключ с ролью <span className="font-medium text-foreground">Admin read only</span>: сервис
             только читает отчёты и товары и ничего не меняет в магазине.
           </span>
         </li>
