@@ -6,6 +6,8 @@ import { QUEUE_EMAIL } from 'src/queue/queue.constants';
 // a***@gmail.com — адрес в логах без полного раскрытия
 const maskEmail = (email: string) => email.replace(/^(.).*(@.*)$/, '$1***$2');
 
+const ONBOARDING_CHECK_IN_DELAY = 60 * 60 * 1000;
+
 export type EnqueueResult = { jobId?: string; deduplicated: boolean };
 
 @Injectable()
@@ -16,6 +18,15 @@ export class EmailProducerService {
 
   async sendWelcome(to: string) {
     await this.enqueue('welcome', { to });
+  }
+
+  // «Разобрались ли?» через час после регистрации. Стадию онбординга воркер узнаёт у бэка в момент отправки,
+  // а не сейчас — за час юзер мог уже подключить магазин. jobId — чтобы письмо не ушло дважды
+  async scheduleOnboardingCheckIn(userId: string, to: string) {
+    await this.enqueue('onboarding.check-in', { to, userId }, {
+      delay: ONBOARDING_CHECK_IN_DELAY,
+      jobId: `onboarding-check-in-${userId}`,
+    });
   }
 
   // код живёт 10 мин — долгие ретраи бессмысленны, поэтому свои attempts

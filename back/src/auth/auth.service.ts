@@ -20,6 +20,11 @@ import { verifyWebAppInitData } from './telegram-webapp';
 
 export type TelegramIdentity = { chatId: bigint; username: string | null; name: string };
 
+// = OnboardingStage в email-worker/src/email/email.types.ts
+// no_org — магазин не подключён, setup — данные организации/товары не проверены, no_runs — статформ не запускал
+export type OnboardingStage = 'no_org' | 'setup' | 'no_runs' | 'has_runs';
+export type OnboardingCheckIn = { email: string; name: string | null; stage: OnboardingStage; actionUrl: string };
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -68,6 +73,9 @@ export class AuthService {
     if (!existing) {
       this.emailProducer.sendWelcome(dto.email).catch((e) =>
         this.logger.error(`welcome email failed: ${e.message}`),
+      );
+      this.emailProducer.scheduleOnboardingCheckIn(user.id, dto.email).catch((e) =>
+        this.logger.error(`onboarding check-in schedule failed: ${e.message}`),
       );
       void this.telegram.alertAdmin(`🆕 Новый пользователь: ${escapeHtml(dto.email)}`);
     }
@@ -138,6 +146,35 @@ export class AuthService {
       select: USER_VIEW_SELECT,
     });
     return toUserView(updated);
+  }
+
+  // ─── Письмо «разобрались ли?» (email-worker, через час после регистрации) ─────
+
+  // где юзер остановился — от этого зависит текст письма; null — слать некому (аккаунт удалён или без почты)
+  async getOnboardingCheckIn(userId: string): Promise<OnboardingCheckIn | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        email: true,
+        name: true,
+        isOnboardingComplete: true,
+        organizations: { select: { _count: { select: { statFormRuns: true } } } },
+      },
+    });
+    if (!user?.email) return null;
+
+    const orgs = user.organizations;
+    const stage: OnboardingStage = !orgs.length
+      ? 'no_org'
+      : !user.isOnboardingComplete
+        ? 'setup'
+        : orgs.some((o) => o._count.statFormRuns > 0)
+          ? 'has_runs'
+          : 'no_runs';
+    // пока онбординг не пройден, кабинет всё равно редиректит на /onboarding
+    const path = stage === 'no_org' || stage === 'setup' ? '/onboarding' : '/dashboard/statforms';
+    const actionUrl = `${this.config.get<string>('FRONTEND_URL', 'http://localhost:3000')}${path}`;
+    return { email: user.email, name: user.name, stage, actionUrl };
   }
 
   // без автослияния аккаунтов: занятая почта = другой аккаунт, юзер решает сам

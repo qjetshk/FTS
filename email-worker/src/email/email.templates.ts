@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { WelcomeEmail } from './templates/welcome';
 import { LoginCodeTemplate } from './templates/login-code';
+import { OnboardingCheckInTemplate } from './templates/onboarding-check-in';
 import { StatformReadyTemplate } from './templates/statform-ready';
 import { StatformFailedTemplate } from './templates/statform-failed';
 import { StatformNoSalesTemplate } from './templates/statform-no-sales';
@@ -11,6 +12,8 @@ import type { EmailJobData, EmailJobName } from './email.types';
 import type { BackApiClient, EmailAttachment } from './back-api.client';
 
 type EmailTemplate<T extends EmailJobName> = {
+  // дополняет данные задачи в момент отправки (то, что могло измениться, пока задача ждала); null — письмо не нужно
+  prepare?: (data: EmailJobData<T>, back: BackApiClient) => Promise<EmailJobData<T> | null>;
   subject: (data: EmailJobData<T>) => string;
   render: (data: EmailJobData<T>) => ReactElement;
   // вложения подтягиваются в момент отправки, в задаче очереди лежат только ссылки (id)
@@ -22,6 +25,17 @@ export const EMAIL_TEMPLATES: { [T in EmailJobName]: EmailTemplate<T> } = {
   'welcome': {
     subject: () => 'Добро пожаловать в easyfts!',
     render: () => WelcomeEmail(),
+  },
+  'onboarding.check-in': {
+    // за час юзер мог пройти онбординг, сменить или отвязать почту — берём актуальное
+    prepare: async (d, back) => {
+      const checkIn = await back.getOnboardingCheckIn(d.userId);
+      if (!checkIn || checkIn.email !== d.to) return null;
+      return { ...d, name: checkIn.name, stage: checkIn.stage, actionUrl: checkIn.actionUrl };
+    },
+    subject: () => 'Получилось разобраться с easyfts?',
+    render: (d) =>
+      OnboardingCheckInTemplate({ name: d.name ?? null, stage: d.stage ?? 'no_org', actionUrl: d.actionUrl ?? '' }),
   },
   'login-code': {
     subject: (d) => `${d.code} — код для входа в easyfts`,

@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Patch,
   Post,
   Req,
@@ -22,6 +23,7 @@ import { UpdateNotificationsDto } from './dto/update-notifications.dto';
 import { TelegramLoginService } from './telegram-login.service';
 import type { JwtPayload } from './interfaces/jwt.interface';
 import { JwtAuthGuard, JwtRefreshGuard } from 'src/guards/jwt.guard';
+import { ApiKeyGuard } from 'src/guards/api-key.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 
 @Controller('auth')
@@ -119,6 +121,13 @@ export class AuthController {
       refreshToken: string;
     };
     return this.authService.refresh(userId, refreshToken, res, req.headers['user-agent'], req.ip);
+  }
+
+  // email-worker → стадия онбординга для письма через час после регистрации
+  @Get('internal/onboarding/:userId')
+  @UseGuards(ApiKeyGuard)
+  async onboardingCheckIn(@Param('userId') userId: string) {
+    return { checkIn: await this.authService.getOnboardingCheckIn(userId) };
   }
 
   @Get('@me')

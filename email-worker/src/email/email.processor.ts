@@ -22,7 +22,13 @@ export class EmailProcessor extends WorkerHost {
     this.logger.log(`Job received: id=${job.id} type=${job.name} to=${to} attempt=${attempt}`);
     await job.log(`attempt ${attempt}: sending "${job.name}" to ${to}`);
 
-    const { resendId, attachments } = await this.emailService.send(job.name, job.data);
+    const result = await this.emailService.send(job.name, job.data);
+    if ('skipped' in result) {
+      this.logger.log(`Skipped: id=${job.id} type=${job.name} to=${to} — no longer needed`);
+      await job.log('skipped: no longer needed');
+      return;
+    }
+    const { resendId, attachments } = result;
 
     const files = attachments ? ` attachments=${attachments}` : '';
     this.logger.log(`Sent: id=${job.id} type=${job.name} to=${to}${files} resendId=${resendId}`);

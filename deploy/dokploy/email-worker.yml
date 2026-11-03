@@ -15,6 +15,7 @@ services:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY}
       RESEND_API_KEY: ${RESEND_API_KEY}
       EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO}
       # api.resend.com (Cloudflare) из РФ не открывается — fetch идёт через xray; бэк внутри сети — напрямую
       NODE_USE_ENV_PROXY: 1
       HTTPS_PROXY: http://fts-xray:10809
