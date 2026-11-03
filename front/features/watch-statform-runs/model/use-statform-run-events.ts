@@ -5,7 +5,7 @@ import { useDispatch } from "react-redux"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { useAuthEventStream, type StreamEvent } from "@/shared/api"
-import { useSelectedOrgId } from "@/entities/organization"
+import { useGetAllOrgsQuery, useSelectedOrgId } from "@/entities/organization"
 import { ROUTES } from "@/shared/config"
 import {
   useGetStatformRunsQuery,
@@ -26,6 +26,7 @@ export function useStatformRunEvents() {
   // статусы прогонов открытой организации — чтобы не показать тоаст о прогоне, который уже был завершён до загрузки
   const orgId = useSelectedOrgId()
   const { data } = useGetStatformRunsQuery(orgId ?? "", { skip: !orgId })
+  const { data: orgs = [] } = useGetAllOrgsQuery()
 
   // последний известный статус каждого прогона — чтобы тоаст был только на переходе, а не на каждом событии
   const statuses = useRef(new Map<string, StatFormRunStatus>())
@@ -37,37 +38,40 @@ export function useStatformRunEvents() {
     (run: StatFormRun) => {
       const title = formatPeriodTitle(run.period)
       const ready = run.statForms.filter((f) => f.status === "READY").length
+      // события идут по всем организациям юзера — при нескольких подписываем, о какой речь
+      const orgName = orgs.length > 1 ? orgs.find((o) => o.id === run.organizationId)?.fullOrg : undefined
+      const withOrg = (text?: string) => (orgName ? [orgName, text].filter(Boolean).join(" · ") : text)
       switch (run.status) {
         case "READY":
           if (ready === 0) {
-            toast.info(`За ${title} статформа не нужна`, { description: "Отгрузок в страны ЕАЭС в этом месяце не было" })
+            toast.info(`За ${title} статформа не нужна`, { description: withOrg("Отгрузок в страны ЕАЭС в этом месяце не было") })
             break
           }
           toast.success(`Статформы за ${title} готовы`, {
-            description: `${filesLabel(ready)} — можно скачать здесь или из письма`,
+            description: withOrg(`${filesLabel(ready)} — можно скачать здесь или из письма`),
           })
           break
         case "PARTIAL":
           toast.warning(`Статформы за ${title} готовы частично`, {
-            description: `${filesLabel(ready)}, по некоторым странам — ошибка`,
+            description: withOrg(`${filesLabel(ready)}, по некоторым странам — ошибка`),
           })
           break
         case "NEEDS_REVIEW":
           toast.warning(`Генерация за ${title} остановлена`, {
-            description: run.failureReason ?? "Проверьте коды ТН ВЭД у товаров",
+            description: withOrg(run.failureReason ?? "Проверьте коды ТН ВЭД у товаров"),
             action: { label: "К товарам", onClick: () => router.push(ROUTES.products) },
             duration: 10_000,
           })
           break
         case "FAILED":
           toast.error(`Не удалось сформировать статформы за ${title}`, {
-            description: run.failureReason ?? undefined,
+            description: withOrg(run.failureReason ?? undefined),
             duration: 10_000,
           })
           break
       }
     },
-    [router],
+    [router, orgs],
   )
 
   const onEvent = useCallback(

@@ -37,8 +37,9 @@ function assertCompletedPeriod(period: string) {
     throw new UnprocessableEntityException('Статформы формируются за завершённый месяц — выберите прошлый месяц');
   }
 }
-// ручных запусков в час на организацию; STATFORM_MANUAL_RUNS_LIMIT=0 — без лимита (dev, отладка пайплайна)
-const MANUAL_RUNS_LIMIT = Number(process.env.STATFORM_MANUAL_RUNS_LIMIT ?? 2);
+// ручных запусков в час на организацию; STATFORM_MANUAL_RUNS_LIMIT=0 — без лимита (dev, отладка пайплайна).
+// 6 — с запасом на ошибки с CSV и перезапуски; спам кнопкой и так отсекает блокировка одной активной генерации
+const MANUAL_RUNS_LIMIT = Number(process.env.STATFORM_MANUAL_RUNS_LIMIT ?? 6);
 const MANUAL_RUNS_WINDOW = 60 * 60;
 
 // '2026-09' → 'сентябрь 2026'

@@ -26,7 +26,7 @@ import {
 import { useKeyCheck } from "../lib/use-key-check.lib";
 import { KeyCheckStatus } from "./KeyCheckStatus";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, KeyRound, ShieldCheck, UserRound } from "lucide-react";
 
 type Props = {
   onComplete: (orgData: Organization, apiKey: string, clientId: string) => void;
@@ -78,6 +78,24 @@ export function ApiKeysStep({ onComplete }: Props) {
           </Link>
         </p>
       </div>
+      {/* на этом шаге отваливаются: нет прав на раздел API или страшно отдавать ключ */}
+      <ul className="w-full flex flex-col gap-2 text-sm text-muted-foreground">
+        <li className="flex gap-2">
+          <KeyRound className="size-4 shrink-0 mt-0.5" />
+          <span>
+            Создайте ключ с ролью <span className="font-medium text-foreground">Admin read only</span> — сервис
+            только читает отчёты и товары и ничего не меняет в магазине.
+          </span>
+        </li>
+        <li className="flex gap-2">
+          <ShieldCheck className="size-4 shrink-0 mt-0.5" />
+          <span>Ключ хранится в зашифрованном виде, удалить его можно в любой момент.</span>
+        </li>
+        <li className="flex gap-2">
+          <UserRound className="size-4 shrink-0 mt-0.5" />
+          <span>Нет доступа к разделу API? Попросите ключ у владельца или администратора кабинета.</span>
+        </li>
+      </ul>
 
       <Form {...form}>
         <form

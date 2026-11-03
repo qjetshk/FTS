@@ -45,6 +45,20 @@ describe('сборка статформы', () => {
     expect(goods[0]).toMatchObject({ tnvedCode: '6302600000', statisticalCostRub: 1018, statisticalCostUsd: 12.5 });
   });
 
+  it('mapOrdersToGoods: вес отправления не умножается на количество и делится между его строками', () => {
+    const goods = mapOrdersToGoods(
+      [
+        order({ quantity: 2, weight: '0.40' }), // 2 шт. в отправлении весом 0.4 кг
+        order({ shipment_number: '0123456789-0002-1', quantity: 3, weight: '0.90' }),
+        order({ shipment_number: '0123456789-0002-1', quantity: 1, weight: '0.90' }),
+        order({ shipment_number: '0123456789-0002-1', sku: 999, quantity: 2, weight: '0.90' }), // без ТН ВЭД
+      ],
+      tnvedMap,
+      81.45,
+    );
+    expect(goods.map((g) => g.netWeight)).toEqual([0.4, 0.45, 0.15]);
+  });
+
   it('extractDocuments: договор на 1-е число месяца и по одному счёту на отправление', () => {
     const docs = extractDocuments([order(), order(), order({ shipment_number: '0123456789-0002-1' })]);
     expect(docs[0]).toEqual({ name: 'Договор', number: 'б/н', date: '2026-09-01' });

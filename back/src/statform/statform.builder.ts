@@ -15,7 +15,7 @@ export interface N8nOrderItem {
   quantity: number;
   price: number;
   shipment_amount: number;
-  weight: string; // '0.20'
+  weight: string; // '0.20' — «Заявленный итоговый вес для отправления»: вес всего отправления, а не единицы товара
 }
 
 // ─── Внутренние типы ──────────────────────────────────────────────────────────
@@ -68,13 +68,20 @@ export function mapOrdersToGoods(
   tnvedMap: Record<number, { code: string; name: string; unit: string | null }>,
   usdRate: number,
 ): AggregatedGood[] {
+  // вес в отчёте — на всё отправление и повторяется в каждой его строке:
+  // делим его между строками пропорционально количеству (веса единицы товара в отчёте нет).
+  // Считаем по всем строкам, включая пропущенные без ТН ВЭД, — их доля не должна достаться другим товарам
+  const shipmentQuantity = new Map<string, number>();
+  for (const o of orders) {
+    shipmentQuantity.set(o.shipment_number, (shipmentQuantity.get(o.shipment_number) ?? 0) + o.quantity);
+  }
+
   return orders.flatMap((order) => {
     const tnved = tnvedMap[Number(order.sku)];
     if (!tnved) return [];
 
-    const weight = parseFloat(
-      (parseFloat(order.weight) * order.quantity).toFixed(4),
-    );
+    const share = order.quantity / (shipmentQuantity.get(order.shipment_number) || order.quantity || 1);
+    const weight = parseFloat((parseFloat(order.weight) * share).toFixed(4));
     const costRub = order.shipment_amount;
 
     return [
