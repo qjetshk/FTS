@@ -3,7 +3,7 @@
 import { useState } from "react"
 import type { ColumnSizingState } from "@tanstack/react-table"
 import { Button } from "@/shared/ui"
-import { useGetProductsQuery, useGetProductsSnapshotQuery, isNeedsAttention, type PendingTnved } from "@/entities/product"
+import { useGetProductsQuery, useGetProductsSnapshotQuery, type PendingTnved } from "@/entities/product"
 import { cn } from "@/shared/lib"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { MAIN_LIMIT } from "./config/table.config"
@@ -21,10 +21,16 @@ type Props = {
   onCountrySelect?: (productId: number, country: string) => void
 }
 
+// больше ATTENTION_LIMIT не показываем разом — честно пишем, сколько всего
+const attentionLabel = (shown: number, total: number) =>
+  total > shown ? `Требует внимания: ${total} (показаны первые ${shown})` : `Требует внимания: ${total}`
+
 const EMPTY_PENDING_TNVED: Record<number, PendingTnved> = {}
 const EMPTY_PENDING_COUNTRY: Record<number, string> = {}
 const NOOP = () => {}
 const LIVE_POLL_MS = 5000
+// проблемных обычно немного — грузим разом (максимум бэка), остальные — постранично
+const ATTENTION_LIMIT = 200
 
 export function ProductsTable({ clientId, className, showClassificationProgress = false, live = false, pendingTnvedMap = EMPTY_PENDING_TNVED, onTnvedSelect = NOOP, pendingCountryMap = EMPTY_PENDING_COUNTRY, onCountrySelect = NOOP }: Props) {
   const [mainPage, setMainPage] = useState(1)
@@ -32,17 +38,25 @@ export function ProductsTable({ clientId, className, showClassificationProgress 
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({})
 
   const pollingInterval = live ? LIVE_POLL_MS : 0
-  const { data, isLoading } = useGetProductsQuery({ clientId, page: 1, limit: 100 }, { pollingInterval })
+  const { data: attention, isLoading: attentionLoading } = useGetProductsQuery(
+    { clientId, page: 1, limit: ATTENTION_LIMIT, view: "attention" },
+    { pollingInterval },
+  )
+  const { data: main, isLoading: mainLoading } = useGetProductsQuery(
+    { clientId, page: mainPage, limit: MAIN_LIMIT, view: "ok" },
+    { pollingInterval },
+  )
   const { data: snapshot = [] } = useGetProductsSnapshotQuery(clientId, {
     pollingInterval,
     skip: !clientId || !showClassificationProgress,
   })
 
-  const allItems = data?.items ?? []
-  const badItems = allItems.filter(p => isNeedsAttention(p))
-  const goodItems = allItems.filter(p => !isNeedsAttention(p))
-  const totalGoodPages = Math.ceil(goodItems.length / MAIN_LIMIT)
-  const pageItems = goodItems.slice((mainPage - 1) * MAIN_LIMIT, mainPage * MAIN_LIMIT)
+  const isLoading = attentionLoading || mainLoading
+  const badItems = attention?.items ?? []
+  const badTotal = attention?.total ?? 0
+  const pageItems = main?.items ?? []
+  const goodTotal = main?.total ?? 0
+  const totalGoodPages = Math.ceil(goodTotal / MAIN_LIMIT)
   const nullCount = snapshot.filter(p => p.tnvedStatus === null).length
   const hasBad = isLoading || badItems.length > 0
   const attentionMaxH = isLoading ? 150 : Math.min(badItems.length * 42 + 40, 250)
@@ -62,7 +76,7 @@ export function ProductsTable({ clientId, className, showClassificationProgress 
           clientId={clientId}
           isLoading={isLoading}
           variant="attention"
-          label={isLoading ? undefined : `Требует внимания — ${badItems.length}`}
+          label={isLoading ? undefined : attentionLabel(badItems.length, badTotal)}
           maxHeight={attentionMaxH}
           columnSizing={columnSizing}
           onColumnSizingChange={setColumnSizing}
@@ -78,7 +92,7 @@ export function ProductsTable({ clientId, className, showClassificationProgress 
         clientId={clientId}
         isLoading={isLoading}
         variant="main"
-        label={(!isLoading && hasBad && goodItems.length > 0) ? `Товары — ${goodItems.length}` : undefined}
+        label={(!isLoading && hasBad && goodTotal > 0) ? `Товары: ${goodTotal}` : undefined}
         flex
         columnSizing={columnSizing}
         onColumnSizingChange={setColumnSizing}
@@ -90,7 +104,7 @@ export function ProductsTable({ clientId, className, showClassificationProgress 
 
       {totalGoodPages > 1 && (
         <div className="flex items-center justify-between text-xs text-muted-foreground shrink-0">
-          <span>{goodItems.length} товаров</span>
+          <span>{goodTotal} товаров</span>
           <div className="flex items-center gap-1.5">
             <Button variant="ghost" size="icon-xs" onClick={() => setMainPage(p => Math.max(1, p - 1))} disabled={mainPage === 1}><ChevronLeft className="size-3.5" /></Button>
             <span>{mainPage} / {totalGoodPages}</span>

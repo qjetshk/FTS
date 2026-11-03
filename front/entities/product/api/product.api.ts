@@ -1,11 +1,12 @@
 import { baseApi } from "@/shared/api"
-import type { GetProductsResponse, ProductSnapshot, ProductsSyncState, TnvedStatus } from "../model/product.type"
+import type { GetProductsResponse, ProductSnapshot, ProductsSyncState, ProductView, TnvedStatus } from "../model/product.type"
 
 const productApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    getProducts: build.query<GetProductsResponse, { clientId: number; page?: number; limit?: number }>({
-      query: ({ clientId, page = 1, limit = 20 }) =>
-        `/products/get-all?clientId=${clientId}&page=${page}&limit=${limit}`,
+    // view: attention — нужна правка (isNeedsAttention), ok — остальные; фильтр и страницы считает бэк
+    getProducts: build.query<GetProductsResponse, { clientId: number; page?: number; limit?: number; view?: ProductView }>({
+      query: ({ clientId, page = 1, limit = 20, view }) =>
+        `/products/get-all?clientId=${clientId}&page=${page}&limit=${limit}${view ? `&view=${view}` : ""}`,
       providesTags: ["Product"],
     }),
     getProductsSnapshot: build.query<ProductSnapshot[], number>({

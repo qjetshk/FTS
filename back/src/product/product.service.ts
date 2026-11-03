@@ -4,6 +4,20 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateTnvedDto } from './dto/update-tnved.dto';
 import { UpdateCountryDto } from './dto/update-country.dto';
 import { GetProductsDto } from './dto/get-products.dto';
+import { Prisma } from '@prisma/client';
+
+// = isNeedsAttention на фронте (entities/product): код под вопросом, кода нет или страна не определена
+const NEEDS_ATTENTION: Prisma.ProductWhereInput = {
+  OR: [{ tnvedStatus: 'NEEDS_REVIEW' }, { tnvedCode: null }, { countryConflict: true }, { country: null }],
+};
+// дополнение к NEEDS_ATTENTION явно, а не через NOT: в SQL NOT (status = 'NEEDS_REVIEW') для status NULL даёт NULL,
+// и товар без статуса выпал бы из обоих списков
+const NO_ATTENTION: Prisma.ProductWhereInput = {
+  OR: [{ tnvedStatus: null }, { tnvedStatus: { not: 'NEEDS_REVIEW' } }],
+  tnvedCode: { not: null },
+  countryConflict: false,
+  country: { not: null },
+};
 
 @Injectable()
 export class ProductService {
@@ -172,18 +186,22 @@ export class ProductService {
     const page = dto.page ?? 1;
     const limit = dto.limit ?? 20;
     const skip = (page - 1) * limit;
+    const where: Prisma.ProductWhereInput = {
+      organizationId: organization.id,
+      ...(dto.view === 'attention' && NEEDS_ATTENTION),
+      ...(dto.view === 'ok' && NO_ATTENTION),
+    };
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.product.findMany({
-        where: { organizationId: organization.id },
+        where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        // id — чтобы порядок между страницами был стабильным при одинаковом createdAt (товары синкаются пачкой)
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
         include: { tnvedAlternatives: true },
       }),
-      this.prisma.product.count({
-        where: { organizationId: organization.id },
-      }),
+      this.prisma.product.count({ where }),
     ]);
 
     return {

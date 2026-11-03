@@ -42,6 +42,8 @@ export type ProductSnapshot = {
   countryConflict: boolean
 }
 
+export type ProductView = "attention" | "ok"
+
 export type GetProductsResponse = {
   items: Product[]
   total: number
